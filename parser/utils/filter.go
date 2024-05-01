@@ -1,7 +1,5 @@
 package utils
 
-// import "fmt"
-
 func FilterByService(trips []Trip, service string) []Trip {
   arr_map := make(map[string][]Trip)
   for _, trip := range trips {
