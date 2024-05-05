@@ -5,7 +5,7 @@ import (
 	"sort"
 	"time"
   "strconv"
-	utils "you-gotta-go/parser/utils"
+	utils "you-gotta-go/cmd/parser/utils"
 )
 
 func GetNextTrip(data []utils.Trip) utils.Trip {

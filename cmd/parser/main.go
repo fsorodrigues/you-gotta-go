@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	trip "you-gotta-go/parser/tripping"
-	utils "you-gotta-go/parser/utils"
+	trip "you-gotta-go/cmd/parser/tripping"
+	utils "you-gotta-go/cmd/parser/utils"
 )
 
 func main() {
