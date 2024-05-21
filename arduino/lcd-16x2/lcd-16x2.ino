@@ -1,4 +1,8 @@
-#include <string.h>
+#include <LiquidCrystal.h>
+
+// https://www.arduino.cc/reference/en/libraries/liquidcrystal/liquidcrystal/
+// LiquidCrystal(rs, enable, d4, d5, d6, d7)
+LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
 const byte numBytes = 32;
 byte receivedBytes[numBytes];
@@ -10,7 +14,9 @@ void setup() {
   Serial.begin(9600);
   Serial.println("<Arduino is ready>");
 
-  pinMode(LED_BUILTIN, OUTPUT);
+  // set up the LCD's number of columns and rows
+  lcd.begin(16, 2);
+  Serial.println("<LCD ready>");
 }
 
 void loop() {
@@ -70,16 +76,14 @@ void getNewData() {
 
 void printData() {
   char* msg = (char *)displayBytes;
-
-  if (strncmp("23:", msg, 3) == 0) {
-    digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-    delay(500);                      // wait for a second
-    digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-    delay(500);    
-  }
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print(msg);
+  // if (strncmp("23:", msg, 3) == 0) {
+  //   digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
+  //   delay(500);                      // wait for a second
+  //   digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
+  //   delay(500);    
+  // }
 }
 
-// Serial.print((char *)displayBytes);
-// Serial.print(" ");
-// Serial.print(strcmp((char *)displayBytes, "10"));
-// Serial.println();
