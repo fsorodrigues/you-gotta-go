@@ -18,5 +18,5 @@ func main() {
 		trip.ParseTrip(NextTrip, message)
 	}
 
-	fmt.Println(*message)
+	fmt.Print(*message)
 }
