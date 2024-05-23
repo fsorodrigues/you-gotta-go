@@ -9,6 +9,7 @@ byte receivedBytes[numBytes];
 byte displayBytes[numBytes];
 byte numReceived = 0;
 boolean newData = false;
+boolean newMsg = false;
 
 void setup() {
   Serial.begin(9600);
@@ -50,6 +51,7 @@ void recvBytesWithStartEndMarkers() {
         numReceived = ndx;  // save the number for use when printing
         ndx = 0;
         newData = true;
+        newMsg = true;
       }
     }
 
@@ -76,9 +78,13 @@ void getNewData() {
 
 void printData() {
   char* msg = (char *)displayBytes;
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(msg);
+  if (newMsg == true) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(msg);
+
+    newMsg = false;
+  }
   // if (strncmp("23:", msg, 3) == 0) {
   //   digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
   //   delay(500);                      // wait for a second
