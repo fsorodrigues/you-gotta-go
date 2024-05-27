@@ -26,11 +26,11 @@ func formatTime(d time.Duration) string {
 }
 
 func decideScenario(trip utils.Trip) string {
-	if !trip.Monitored {
-		return "not-tracking"
-	}
 	if trip.Status == "cancelled" {
 		return "cancelled"
+	}
+	if !trip.Monitored {
+		return "not-tracking"
 	}
 	if trip.Status == "delayed" {
 		return "delayed"
