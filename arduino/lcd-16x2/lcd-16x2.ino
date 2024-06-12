@@ -90,8 +90,7 @@ void getNewData() {
 void printData() {
   char* msg = (char *)displayBytes;
   if (newMsg == true) {
-    lcd.clear();
-    lcd.setCursor(0, 0);
+    clearLCD();
     lcd.print(msg);
 
     newMsg = false;
@@ -104,3 +103,7 @@ void printData() {
   // }
 }
 
+void clearLCD() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+}
