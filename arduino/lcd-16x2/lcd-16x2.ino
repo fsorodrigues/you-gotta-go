@@ -4,6 +4,10 @@
 // LiquidCrystal(rs, enable, d4, d5, d6, d7)
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
 
+int ENCODING_VERSION = 1;
+char MSGSTART = '<';
+char MSGEND = '>';
+
 const byte numBytes = 32;
 byte receivedBytes[numBytes];
 byte displayBytes[numBytes];
@@ -13,17 +17,24 @@ boolean newMsg = false;
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("<Arduino is ready>");
+  encodeMessage(msg, "Arduino is ready");
+  Serial.println(msg);
 
   // set up the LCD's number of columns and rows
   lcd.begin(16, 2);
-  Serial.println("<LCD ready>");
+  encodeMessage(msg, "LCD is ready");
+  Serial.println(msg);
 }
 
 void loop() {
   recvBytesWithStartEndMarkers();
   getNewData();
   printData();
+void encodeMessage(char m[numBytes], char msg[]) {
+  int LEN = strlen(msg);
+  sprintf(m, "%c%3d%3d%s%c", MSGSTART, ENCODING_VERSION, LEN, msg, MSGEND);
+}
+
 }
 
 void recvBytesWithStartEndMarkers() {
