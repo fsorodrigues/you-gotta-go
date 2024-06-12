@@ -14,6 +14,12 @@ byte displayBytes[numBytes];
 byte numReceived = 0;
 boolean newData = false;
 boolean newMsg = false;
+int switchPin = 7;
+boolean switchState = false;
+boolean prevButtonState = true;
+boolean currButtonState = false;
+boolean stateChanged = false;
+char msg[numBytes];
 
 void setup() {
   Serial.begin(9600);
@@ -24,17 +30,47 @@ void setup() {
   lcd.begin(16, 2);
   encodeMessage(msg, "LCD is ready");
   Serial.println(msg);
+
+  // set up switchPin as INPUT
+  pinMode(switchPin, INPUT);
 }
 
 void loop() {
-  recvBytesWithStartEndMarkers();
-  getNewData();
-  printData();
+  checkSwitch();
+  delay(10);
+  if (switchState == true & stateChanged == true) {
+    encodeMessage(msg, "ON");
+    Serial.println(msg); 
+    stateChanged = false;
+  }
+  else if (switchState == false & stateChanged == true) {
+    encodeMessage(msg, "OFF");
+    Serial.println(msg);
+    stateChanged = false;
+
+    clearLCD();
+  }
+
+  if (switchState == true) {
+    recvBytesWithStartEndMarkers();
+    getNewData();
+    printData();
+  }
+}
+
 void encodeMessage(char m[numBytes], char msg[]) {
   int LEN = strlen(msg);
   sprintf(m, "%c%3d%3d%s%c", MSGSTART, ENCODING_VERSION, LEN, msg, MSGEND);
 }
 
+void checkSwitch() {
+  prevButtonState = currButtonState;
+  currButtonState = digitalRead(switchPin);
+  
+  if (currButtonState == 1 & prevButtonState == 0) {
+    switchState = !switchState;
+    stateChanged = true;
+  }
 }
 
 void recvBytesWithStartEndMarkers() {
@@ -74,7 +110,7 @@ void recvBytesWithStartEndMarkers() {
 
 void getNewData() {
   if (newData == true) {
-    Serial.print("Incoming new data... ");
+    Serial.print("New data incoming... ");
     Serial.print(numReceived);
     Serial.print(" bytes received");
     Serial.println();
