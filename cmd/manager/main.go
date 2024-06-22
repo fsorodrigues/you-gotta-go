@@ -134,6 +134,37 @@ func (c *Controller) setup(conn serial.Port, msgs ...IncomingMsg) {
 	}
 }
 
+func (c *Controller) sendMsg(conn serial.Port) {
+	for c.SwitchOn {
+		data := scrape()
+		parsed := parse(data)
+		fmt.Println(string(parsed))
+		time.Sleep(15 * time.Second)
+	}
+}
+
+func scrape() []byte {
+	cmd := exec.Command("/Users/fsorodrigues/Desktop/you-gotta-go/binary/scraper", "7932")
+	output, err := cmd.Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return output
+}
+
+func parse(data []byte) []byte {
+	parser := exec.Command("/Users/fsorodrigues/Desktop/you-gotta-go/binary/parser")
+	var buf bytes.Buffer
+	buf.Write(data)
+	parser.Stdin = &buf
+
+	output, err := parser.Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return output
+}
+
 		}
 	}
 }
