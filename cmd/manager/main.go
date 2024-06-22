@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"time"
 	"you-gotta-go/cmd/manager/messages"
 
 	"github.com/joho/godotenv"
@@ -41,6 +43,10 @@ func (c *Controller) ToggleDeviceStatus() {
 
 func (c *Controller) ToggleDisplayStatus() {
 	c.DisplayReady = !c.DisplayReady
+}
+
+func (c *Controller) ToggleSwitch() {
+	c.SwitchOn = !c.SwitchOn
 }
 
 func (c *Controller) openConn() serial.Port {
@@ -165,6 +171,15 @@ func parse(data []byte) []byte {
 	return output
 }
 
+func (c *Controller) run(conn serial.Port, on IncomingMsg, off IncomingMsg) {
+	for {
+		if c.SwitchOn {
+			fmt.Println("Switch is on")
+			go c.sendMsg()
+			c.listenForMsg(conn, off)
+		} else {
+			fmt.Println("Switch is off")
+			c.listenForMsg(conn, on)
 		}
 	}
 }
@@ -200,6 +215,11 @@ func main() {
 	)
 
 	if controller.DeviceReady && controller.DisplayReady {
-		fmt.Println("Arduino ready to rock'n'roll")
+		fmt.Println("Device and display are ready")
+		controller.run(
+			port,
+			IncomingMsg{"ON", controller.ToggleSwitch},
+			IncomingMsg{"OFF", controller.ToggleSwitch},
+		)
 	}
 }
