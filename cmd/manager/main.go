@@ -128,15 +128,12 @@ func (c *Controller) listenForMsg(conn serial.Port, msg IncomingMsg) {
 	}
 }
 
+func (c *Controller) setup(conn serial.Port, msgs ...IncomingMsg) {
 	for _, msg := range msgs {
-		c.read(conn)
-		m, e := messages.DecodeMsg(c.LastMsg, 1)
-		if e != nil {
-			log.Fatal(e)
-		}
+		c.listenForMsg(conn, msg)
+	}
+}
 
-		if m == msg.value {
-			msg.callback()
 		}
 	}
 }
@@ -167,8 +164,8 @@ func main() {
 	port := controller.openConn()
 	controller.setup(
 		port,
-		SetupMsg{"Arduino is ready", controller.ToggleDeviceStatus},
-		SetupMsg{"LCD is ready", controller.ToggleDisplayStatus},
+		IncomingMsg{"Arduino is ready", controller.ToggleDeviceStatus},
+		IncomingMsg{"LCD is ready", controller.ToggleDisplayStatus},
 	)
 
 	if controller.DeviceReady && controller.DisplayReady {
