@@ -24,15 +24,15 @@ type Controller struct {
 	Reading        bool
 }
 
+type IncomingMsg struct {
+	value    string
+	callback func()
+}
+
 type SerialReader interface {
 	openConn() serial.Port
 	read() int
-	// listenForMsg(conn serial.Port, msg string)
-}
-
-type SetupMsg struct {
-	value    string
-	callback func()
+	listenForMsg(conn serial.Port, msg IncomingMsg)
 }
 
 func (c *Controller) ToggleDeviceStatus() {
@@ -116,7 +116,18 @@ func (c *Controller) read(conn serial.Port) {
 	}
 }
 
-func (c *Controller) setup(conn serial.Port, msgs ...SetupMsg) {
+func (c *Controller) listenForMsg(conn serial.Port, msg IncomingMsg) {
+	c.read(conn)
+	m, e := messages.DecodeMsg(c.LastMsg, 1)
+	if e != nil {
+		log.Fatal(e)
+	}
+
+	if m == msg.value {
+		msg.callback()
+	}
+}
+
 	for _, msg := range msgs {
 		c.read(conn)
 		m, e := messages.DecodeMsg(c.LastMsg, 1)
