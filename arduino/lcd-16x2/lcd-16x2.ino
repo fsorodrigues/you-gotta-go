@@ -51,7 +51,7 @@ void loop() {
     clearLCD();
   }
 
-  if (switchState == true) {
+  if (switchState == false) {
     recvBytesWithStartEndMarkers();
     getNewData();
     printData();
@@ -108,13 +108,29 @@ void recvBytesWithStartEndMarkers() {
   }
 }
 
+
+int bytesToInt(byte* arr) {
+  int num = 0;
+  for (int i = 0; i < 3; i++) {
+    int b = arr[i];
+    if (b < 48 || b > 57) {
+			continue;
+		}
+  }
+
+  return 1;
+}
+
 void getNewData() {
   if (newData == true) {
     Serial.print("New data incoming... ");
     Serial.print(numReceived);
     Serial.print(" bytes received");
     Serial.println();
-  
+    // int msgLen = receivedBytes[3] << 16 | receivedBytes[4] << 8 | receivedBytes[5];
+
+    bytesToInt(receivedBytes);
+
     for (byte ndx = 0; ndx < numBytes; ndx++) {
       displayBytes[ndx] = receivedBytes[ndx];
     }
