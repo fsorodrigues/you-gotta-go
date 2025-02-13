@@ -56,3 +56,14 @@ func DecodeMsg(msg MsgBuf, version int) (string, error) {
 	}
 	return out, nil
 }
+
+func EncodeMsg(msg []byte, version int) ([]byte, error) {
+	if len(msg) < 1 {
+		return []byte(""), errors.New("Empty message.")
+	}
+
+	length := len(msg)
+	out_msg := []byte(fmt.Sprintf("<%3d%3d%s>", version, length, string(msg)))
+
+	return out_msg, nil
+}

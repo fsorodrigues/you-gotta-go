@@ -13,6 +13,8 @@ import (
 	"go.bug.st/serial"
 )
 
+const ENCODING_VERSION = 1
+
 type Controller struct {
 	USB_DEVICE     string
 	DeviceReady    bool
@@ -50,7 +52,7 @@ func (c *Controller) ToggleSwitch() {
 }
 
 func (c *Controller) openConn() serial.Port {
-	usbPort, err := serial.Open(c.USB_DEVICE, &serial.Mode{BaudRate: 9600})
+	usbPort, err := serial.Open(c.USB_DEVICE, &serial.Mode{BaudRate: 57600})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -122,9 +124,9 @@ func (c *Controller) read(conn serial.Port) {
 	}
 }
 
-func (c *Controller) listenForMsg(conn serial.Port, msg IncomingMsg) {
+func (c Controller) listenForMsg(conn serial.Port, msg IncomingMsg) {
 	c.read(conn)
-	m, e := messages.DecodeMsg(c.LastMsg, 1)
+	m, e := messages.DecodeMsg(c.LastMsg, ENCODING_VERSION)
 	if e != nil {
 		log.Fatal(e)
 	}
@@ -134,7 +136,19 @@ func (c *Controller) listenForMsg(conn serial.Port, msg IncomingMsg) {
 	}
 }
 
-func (c *Controller) setup(conn serial.Port, msgs ...IncomingMsg) {
+func (c Controller) writeMsg(conn serial.Port, msg []byte) {
+	out_msg, encodingErr := messages.EncodeMsg(msg, ENCODING_VERSION)
+	if encodingErr != nil {
+		log.Fatal(encodingErr)
+	}
+
+	_, writeErr := conn.Write(out_msg)
+	if writeErr != nil {
+		log.Fatal(writeErr)
+	}
+}
+
+func (c Controller) setup(conn serial.Port, msgs ...IncomingMsg) {
 	for _, msg := range msgs {
 		c.listenForMsg(conn, msg)
 	}
@@ -144,7 +158,9 @@ func (c *Controller) sendMsg(conn serial.Port) {
 	for c.SwitchOn {
 		data := scrape()
 		parsed := parse(data)
-		fmt.Println(string(parsed))
+
+		c.writeMsg(conn, parsed)
+
 		time.Sleep(15 * time.Second)
 	}
 }
@@ -175,7 +191,7 @@ func (c *Controller) run(conn serial.Port, on IncomingMsg, off IncomingMsg) {
 	for {
 		if c.SwitchOn {
 			fmt.Println("Switch is on")
-			go c.sendMsg()
+			go c.sendMsg(conn)
 			c.listenForMsg(conn, off)
 		} else {
 			fmt.Println("Switch is off")

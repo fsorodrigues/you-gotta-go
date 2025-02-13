@@ -2,6 +2,7 @@ package messages
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 )
 
@@ -26,6 +27,18 @@ func TestDecodeMsg(t *testing.T) {
 	expected := "Heya!"
 
 	if got != expected {
+		t.Errorf("got %s, expected %s", got, expected)
+	}
+}
+
+func TestEncodeMsg(t *testing.T) {
+	rawMsg := []byte("hello")
+	version := 1
+	got, _ := EncodeMsg(rawMsg, version)
+
+	expected := []byte("<  1  5hello>")
+
+	if reflect.DeepEqual(got, expected) {
 		t.Errorf("got %s, expected %s", got, expected)
 	}
 }
