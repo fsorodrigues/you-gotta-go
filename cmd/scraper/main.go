@@ -1,4 +1,4 @@
-package main
+package scraper
 
 import (
 	"fmt"
@@ -6,9 +6,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
+
+func createUrl(BASE_URL string, station int) string {
+	return fmt.Sprintf("%s/stop-predictions?stop_id=%d", BASE_URL, station)
+}
 
 func getData(url string, api_key string) http.Response {
 	client := &http.Client{}
@@ -38,6 +43,14 @@ func parseData(resp http.Response) string {
 	return string(body)
 }
 
+func Scrape(BASE_URL string, station int, API_KEY string) string {
+	url := createUrl(BASE_URL, station)
+
+	resp := getData(url, API_KEY)
+
+	return parseData(resp)
+}
+
 func init() {
 	if err := godotenv.Load(); err != nil {
 		log.Print("No .env file found")
@@ -47,10 +60,9 @@ func init() {
 func main() {
 	API_KEY := os.Getenv("API_KEY")
 	BASE_URL := os.Getenv("BASE_URL")
-	station := os.Args[1]
-	resp := getData(fmt.Sprintf("%s/stop-predictions?stop_id=%s", BASE_URL, station), API_KEY)
+	station, _ := strconv.Atoi(os.Args[1])
 
-	data := parseData(resp)
+	data := Scrape(BASE_URL, station, API_KEY)
 
 	fmt.Println(data)
 }
