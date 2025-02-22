@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 )
 
@@ -25,12 +26,12 @@ func BytesToInt(byteArray []byte) int {
 	return int(num)
 }
 
-func DecodeMsg(msg MsgBuf, version int) (string, error) {
-	if !msg.MsgComplete {
+func (m *MsgBuf) DecodeMsg(version uint8) (string, error) {
+	if !m.MsgComplete {
 		return "", errors.New("Message incomplete")
 	}
 
-	msgBytes := msg.Msg.Bytes()
+	msgBytes := m.Msg.Bytes()
 	if (msgBytes[0] != 60) || (msgBytes[len(msgBytes)-1] != 62) {
 		errMsg := fmt.Sprintf("Invalid message format: '%s'", string(msgBytes))
 		return "", errors.New(errMsg)
@@ -39,7 +40,7 @@ func DecodeMsg(msg MsgBuf, version int) (string, error) {
 	version_start := 1
 	version_bytes := 3
 
-	if BytesToInt(msgBytes[version_start:version_start+version_bytes]) != version {
+	if BytesToInt(msgBytes[version_start:version_start+version_bytes]) != int(version) {
 		fmt.Println("version:", msgBytes)
 		errMsg := fmt.Sprintf("Invalid message version: '%s'", string(msgBytes))
 		return "", errors.New(errMsg)
@@ -52,7 +53,14 @@ func DecodeMsg(msg MsgBuf, version int) (string, error) {
 
 	var out string
 	for i := msg_start; i < msg_bytes+msg_start; i++ {
+		if i >= len(msgBytes) {
+			log.Fatalln("Expected a bigger message. Something's wrong with the encoding")
+		}
+
 		out = out + string(msgBytes[i])
 	}
+
+	// gotta error catch here if the message ends up being smaller than expected
+
 	return out, nil
 }

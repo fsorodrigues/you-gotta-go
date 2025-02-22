@@ -21,8 +21,9 @@ func TestDecodeMsg(t *testing.T) {
 	msg.WriteString("<  1  5Heya!>")
 
 	encodedMsg := MsgBuf{Msg: msg, MsgComplete: true}
-	version := 1
-	got, _ := DecodeMsg(encodedMsg, version)
+	version := uint8(1)
+	got, _ := encodedMsg.DecodeMsg(version)
+
 	expected := "Heya!"
 
 	if got != expected {

@@ -88,8 +88,11 @@ func (c *Comms) handleConnection(conn io.ReadWriteCloser) {
 	// try reading from connection
 	c.ReadFromConnection(conn)
 
-	// after reading kick off routine specified in incoming message
-	fmt.Println(string(c.IncomingMsg.Msg.Bytes()[:]))
+	// decode message, parse it
+	msg, errDecodeMsg := c.IncomingMsg.DecodeMsg(c.MsgEncodingVersion)
+	if errDecodeMsg != nil {
+		log.Fatalln(errDecodeMsg)
+	}
 
 	conn.Close()
 }
