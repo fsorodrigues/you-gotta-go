@@ -1,13 +1,25 @@
-package main
+package parser
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	trip "you-gotta-go/cmd/parser/tripping"
 	utils "you-gotta-go/cmd/parser/utils"
 )
 
-func main() {
-	var data utils.InputData = utils.Read()
+func Unmarshal(dataIn []byte) utils.InputData {
+	var data utils.InputData
+
+	jsonErr := json.Unmarshal(dataIn, &data)
+	if jsonErr != nil {
+		log.Fatalln("Error parsing JSON input")
+	}
+
+	return data
+}
+
+func Parse(data utils.InputData, service string) *string {
 	var trips []utils.Trip = utils.FilterByService(data.Trips, "23")
 	var message *string = new(string)
 
@@ -17,6 +29,14 @@ func main() {
 		var NextTrip utils.Trip = trip.GetNextTrip(trips)
 		trip.ParseTrip(NextTrip, message)
 	}
+
+	return message
+}
+
+func main() {
+	data := utils.Read()
+
+	message := Parse(data, "23")
 
 	fmt.Print(*message)
 }
