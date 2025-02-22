@@ -6,13 +6,12 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
 )
 
-func createUrl(BASE_URL string, station int) string {
-	return fmt.Sprintf("%s/stop-predictions?stop_id=%d", BASE_URL, station)
+func createUrl(BASE_URL string, stop string) string {
+	return fmt.Sprintf("%s/stop-predictions?stop_id=%s", BASE_URL, stop)
 }
 
 func getData(url string, api_key string) http.Response {
@@ -43,8 +42,8 @@ func parseData(resp http.Response) string {
 	return string(body)
 }
 
-func Scrape(BASE_URL string, station int, API_KEY string) string {
-	url := createUrl(BASE_URL, station)
+func Scrape(BASE_URL string, stop string, API_KEY string) string {
+	url := createUrl(BASE_URL, stop)
 
 	resp := getData(url, API_KEY)
 
@@ -60,9 +59,9 @@ func init() {
 func main() {
 	API_KEY := os.Getenv("API_KEY")
 	BASE_URL := os.Getenv("BASE_URL")
-	station, _ := strconv.Atoi(os.Args[1])
+	stop := os.Args[1]
 
-	data := Scrape(BASE_URL, station, API_KEY)
+	data := Scrape(BASE_URL, stop, API_KEY)
 
 	fmt.Println(data)
 }
