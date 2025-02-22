@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log"
 	"os"
+	"strconv"
 	"you-gotta-go/cmd/broadcaster/messages"
 
 	// "you-gotta-go/cmd/scraper"
@@ -34,16 +35,21 @@ func main() {
 	API_KEY := os.Getenv("API_KEY")
 	BASE_URL := os.Getenv("BASE_URL")
 	TCP_PORT := os.Getenv("TCP_PORT")
+	ENCODING_VERSION, err := strconv.Atoi(os.Getenv("ENCODING_VERSION"))
+	if err != nil {
+		log.Fatalln("Error converting ENCODING_VERSION. Is it a valid int?")
+	}
 
 	app := Comms{
-		API_KEY:        API_KEY,
-		BASE_URL:       BASE_URL,
-		TCP_PORT:       TCP_PORT,
-		HoldingBuffer:  make([]byte, 25),
-		IncomingMsg:    messages.MsgBuf{Msg: bytes.Buffer{}, MsgComplete: false},
-		BytesAvailable: 0,
-		BytesRead:      0,
-		Reading:        false,
+		API_KEY:            API_KEY,
+		BASE_URL:           BASE_URL,
+		TCP_PORT:           TCP_PORT,
+		HoldingBuffer:      make([]byte, 25),
+		IncomingMsg:        messages.MsgBuf{Msg: bytes.Buffer{}, MsgComplete: false},
+		BytesAvailable:     0,
+		BytesRead:          0,
+		Reading:            false,
+		MsgEncodingVersion: uint8(ENCODING_VERSION),
 	}
 
 	app.Listen()
