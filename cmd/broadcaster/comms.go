@@ -9,14 +9,16 @@ import (
 )
 
 type Comms struct {
-	API_KEY        string
-	BASE_URL       string
-	TCP_PORT       string
-	HoldingBuffer  []byte
-	IncomingMsg    messages.MsgBuf
-	BytesRead      int
-	BytesAvailable int
-	Reading        bool
+	API_KEY            string
+	BASE_URL           string
+	TCP_PORT           string
+	HoldingBuffer      []byte
+	IncomingMsg        messages.MsgBuf
+	BytesRead          uint8
+	BytesAvailable     uint8
+	Reading            bool
+	MsgEncodingVersion uint8
+	ConnectedDevices   []Device
 }
 
 func (c *Comms) clearIncomingMsg() {
@@ -68,8 +70,9 @@ func (c *Comms) readToBuffer(conn io.ReadWriteCloser) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	c.BytesRead = 0
-	c.BytesAvailable = n
+	c.BytesAvailable = uint8(n)
 }
 
 func (c *Comms) ReadFromConnection(conn io.ReadWriteCloser) {
@@ -84,9 +87,12 @@ func (c *Comms) ReadFromConnection(conn io.ReadWriteCloser) {
 	}
 }
 
-func (c *Comms) handleConnection(conn io.ReadWriteCloser) {
+func (c *Comms) handleConnection(dev Device) {
 	// try reading from connection
-	c.ReadFromConnection(conn)
+	errReadFromConnection := c.ReadFromConnection(dev.Connection)
+	if errReadFromConnection != nil {
+		log.Fatalln(errReadFromConnection)
+	}
 
 	// decode message, parse it
 	msg, errDecodeMsg := c.IncomingMsg.DecodeMsg(c.MsgEncodingVersion)
@@ -94,7 +100,7 @@ func (c *Comms) handleConnection(conn io.ReadWriteCloser) {
 		log.Fatalln(errDecodeMsg)
 	}
 
-	conn.Close()
+	dev.Connection.Close()
 }
 
 func (c *Comms) Listen() {
@@ -110,6 +116,12 @@ func (c *Comms) Listen() {
 			// handle error
 			log.Fatalln("Error accepting incoming TCP connection", err)
 		}
-		go c.handleConnection(conn)
+		// create device, assign connection, and append to list of connected devices
+		dev := Device{
+			Connection: conn,
+		}
+		c.ConnectedDevices = append(c.ConnectedDevices, dev)
+
+		go c.handleConnection(dev)
 	}
 }
