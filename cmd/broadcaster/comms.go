@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 	"you-gotta-go/cmd/broadcaster/messages"
 )
 
@@ -86,6 +87,7 @@ func (c *Comms) ReadFromConnection(conn io.ReadWriteCloser) error {
 			break
 		}
 	}
+
 	if !c.IncomingMsg.MsgComplete {
 		errMsg := fmt.Sprintf(
 			"Error reading message. Message incomplete. Expected %d, got %d bytes",
@@ -112,6 +114,11 @@ func (c *Comms) handleConnection(dev Device) {
 		log.Fatalln(errDecodeMsg)
 	}
 
+	m, startSignal := strings.CutPrefix(msg, "start")
+
+	if startSignal {
+	}
+
 	dev.Connection.Close()
 }
 
@@ -134,6 +141,7 @@ func (c *Comms) Listen() {
 		}
 		c.ConnectedDevices = append(c.ConnectedDevices, dev)
 
+		// start routine
 		go c.handleConnection(dev)
 	}
 }
