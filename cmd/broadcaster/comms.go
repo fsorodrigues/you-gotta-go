@@ -8,6 +8,8 @@ import (
 	"net"
 	"strings"
 	"you-gotta-go/cmd/broadcaster/messages"
+	"you-gotta-go/cmd/parser"
+	"you-gotta-go/cmd/scraper"
 )
 
 type Comms struct {
@@ -117,6 +119,20 @@ func (c *Comms) handleConnection(dev Device) {
 	m, startSignal := strings.CutPrefix(msg, "start")
 
 	if startSignal {
+		// assign stop/service values to device
+		split := strings.Split(m, "|")
+		dev.TargetStop = split[0]
+		dev.TargetService = split[1]
+
+		data := scraper.Scrape(c.BASE_URL, dev.TargetStop, c.API_KEY)
+
+		// after reading kick off routine specified in incoming message
+		payload := parser.Parse(
+			parser.Unmarshal([]byte(data)),
+			dev.TargetService,
+		)
+
+		fmt.Println(*payload)
 	}
 
 	dev.Connection.Close()
