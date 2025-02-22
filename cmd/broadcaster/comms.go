@@ -24,6 +24,7 @@ type Comms struct {
 
 func (c *Comms) clearIncomingMsg() {
 	c.IncomingMsg.Msg.Reset()
+	c.IncomingMsg.MsgComplete = false
 }
 
 func (c *Comms) walkBuffer(conn io.ReadWriteCloser) {
@@ -39,7 +40,6 @@ func (c *Comms) walkBuffer(conn io.ReadWriteCloser) {
 
 		if c.HoldingBuffer[i] == 60 {
 			c.clearIncomingMsg()
-			c.IncomingMsg.MsgComplete = false
 			b[n] = c.HoldingBuffer[i]
 			startByte = n
 			stopByte = n + 1
