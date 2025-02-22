@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -68,14 +69,14 @@ func (c *Comms) walkBuffer(conn io.ReadWriteCloser) {
 func (c *Comms) readToBuffer(conn io.ReadWriteCloser) {
 	n, err := conn.Read(c.HoldingBuffer)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln("Error reading from io.ReadWriteCloser", err)
 	}
 
 	c.BytesRead = 0
 	c.BytesAvailable = uint8(n)
 }
 
-func (c *Comms) ReadFromConnection(conn io.ReadWriteCloser) {
+func (c *Comms) ReadFromConnection(conn io.ReadWriteCloser) error {
 	c.Reading = true
 
 	for c.Reading {
@@ -85,6 +86,17 @@ func (c *Comms) ReadFromConnection(conn io.ReadWriteCloser) {
 			break
 		}
 	}
+	if !c.IncomingMsg.MsgComplete {
+		errMsg := fmt.Sprintf(
+			"Error reading message. Message incomplete. Expected %d, got %d bytes",
+			c.BytesRead+c.BytesAvailable,
+			c.IncomingMsg.Msg.Len(),
+		)
+
+		return errors.New(errMsg)
+	}
+
+	return nil
 }
 
 func (c *Comms) handleConnection(dev Device) {
@@ -104,17 +116,17 @@ func (c *Comms) handleConnection(dev Device) {
 }
 
 func (c *Comms) Listen() {
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%s", c.TCP_PORT))
-	if err != nil {
-		log.Fatalln("Can't open TCP connection", err)
+	ln, errListenTCP := net.Listen("tcp", fmt.Sprintf(":%s", c.TCP_PORT))
+	if errListenTCP != nil {
+		log.Fatalln("Can't open TCP connection", errListenTCP)
 	}
 	defer ln.Close()
 
 	for {
-		conn, err := ln.Accept()
-		if err != nil {
+		conn, errAcceptConnection := ln.Accept()
+		if errAcceptConnection != nil {
 			// handle error
-			log.Fatalln("Error accepting incoming TCP connection", err)
+			log.Fatalln("Error accepting incoming TCP connection", errAcceptConnection)
 		}
 		// create device, assign connection, and append to list of connected devices
 		dev := Device{
