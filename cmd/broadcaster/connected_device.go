@@ -14,7 +14,7 @@ import (
 	"go.bug.st/serial"
 )
 
-type Device struct {
+type ConnectedDevice struct {
 	Id                 string
 	Type               string
 	TargetStop         string
@@ -30,17 +30,17 @@ type Device struct {
 	MsgEncodingVersion uint8
 }
 
-func (dev *Device) clearIncomingMsg() {
+func (dev *ConnectedDevice) clearIncomingMsg() {
 	dev.IncomingMsg.Msg.Reset()
 	dev.IncomingMsg.MsgComplete = false
 }
 
-func (dev *Device) HoldingBufferReset() {
+func (dev *ConnectedDevice) HoldingBufferReset() {
 	dev.BytesAvailable = 0
 	dev.HoldingBuffer = make([]byte, 25)
 }
 
-func (dev *Device) walkBuffer(conn CommsConnection) {
+func (dev *ConnectedDevice) walkBuffer(conn CommsConnection) {
 	b := make([]byte, dev.BytesAvailable)
 	n := 0
 	startByte := 0
@@ -81,7 +81,7 @@ func (dev *Device) walkBuffer(conn CommsConnection) {
 	}
 }
 
-func (d *Device) readToBuffer(conn CommsConnection) {
+func (d *ConnectedDevice) readToBuffer(conn CommsConnection) {
 	conn.SetReadTimeout()
 	n, err := conn.Read(d.HoldingBuffer)
 	if err != nil {
@@ -96,7 +96,7 @@ func (d *Device) readToBuffer(conn CommsConnection) {
 	d.BytesAvailable = uint8(n)
 }
 
-func (dev *Device) ReadFromConnection(conn CommsConnection) error {
+func (dev *ConnectedDevice) ReadFromConnection(conn CommsConnection) error {
 	dev.Reading = true
 
 	for dev.Reading {
@@ -122,7 +122,7 @@ func (dev *Device) ReadFromConnection(conn CommsConnection) error {
 	return nil
 }
 
-func (dev *Device) readForSignal(signal string) (string, bool) {
+func (dev *ConnectedDevice) readForSignal(signal string) (string, bool) {
 	log.Println(fmt.Sprintf("Reading. Waiting for signal: %s", signal))
 	// try reading from connection
 	errReadFromConnection := dev.ReadFromConnection(dev.Connection)
@@ -144,7 +144,7 @@ func (dev *Device) readForSignal(signal string) (string, bool) {
 	return "", false
 }
 
-func (dev *Device) KillDevice() {
+func (dev *ConnectedDevice) KillDevice() {
 	dev.Connection.Close()
 }
 

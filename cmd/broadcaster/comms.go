@@ -18,10 +18,10 @@ type Comms struct {
 	API_KEY          string
 	BASE_URL         string
 	TCP_PORT         string
-	ConnectedDevices map[string]Device
+	ConnectedDevices map[string]ConnectedDevice
 }
 
-func (c *Comms) handleConnection(dev Device) {
+func (c *Comms) handleConnection(dev ConnectedDevice) {
 	initMsg, startSignal := dev.readForSignal("start")
 
 	if startSignal { // start loop
@@ -78,9 +78,10 @@ func (c *Comms) Listen(ENCODING_VERSION int) {
 			// handle error
 			log.Fatalln("Error accepting incoming TCP connection", errAcceptConnection)
 		}
+		defer conn.Close()
 
 		// create device, assign connection, and append to list of connected devices
-		dev := Device{
+		dev := ConnectedDevice{
 			Id: uuid.New().String(),
 			Connection: TCPConnection{
 				Conn:        conn,

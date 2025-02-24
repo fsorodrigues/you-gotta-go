@@ -42,7 +42,7 @@ func main() {
 		API_KEY:          API_KEY,
 		BASE_URL:         BASE_URL,
 		TCP_PORT:         TCP_PORT,
-		ConnectedDevices: make(map[string]Device),
+		ConnectedDevices: make(map[string]ConnectedDevice),
 	}
 
 	app.Listen(ENCODING_VERSION)
