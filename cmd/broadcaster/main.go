@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"log"
 	"os"
 	"strconv"
-	"you-gotta-go/cmd/broadcaster/messages"
 
 	// "you-gotta-go/cmd/scraper"
 
@@ -41,16 +39,11 @@ func main() {
 	}
 
 	app := Comms{
-		API_KEY:            API_KEY,
-		BASE_URL:           BASE_URL,
-		TCP_PORT:           TCP_PORT,
-		HoldingBuffer:      make([]byte, 25),
-		IncomingMsg:        messages.MsgBuf{Msg: bytes.Buffer{}, MsgComplete: false},
-		BytesAvailable:     0,
-		BytesRead:          0,
-		Reading:            false,
-		MsgEncodingVersion: uint8(ENCODING_VERSION),
+		API_KEY:          API_KEY,
+		BASE_URL:         BASE_URL,
+		TCP_PORT:         TCP_PORT,
+		ConnectedDevices: make(map[string]Device),
 	}
 
-	app.Listen()
+	app.Listen(ENCODING_VERSION)
 }

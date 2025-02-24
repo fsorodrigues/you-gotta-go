@@ -1,144 +1,71 @@
 package main
 
 import (
-	"errors"
+	"bytes"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"strings"
+	"time"
 	"you-gotta-go/cmd/broadcaster/messages"
 	"you-gotta-go/cmd/parser"
 	"you-gotta-go/cmd/scraper"
+
+	"github.com/google/uuid"
 )
 
 type Comms struct {
-	API_KEY            string
-	BASE_URL           string
-	TCP_PORT           string
-	HoldingBuffer      []byte
-	IncomingMsg        messages.MsgBuf
-	BytesRead          uint8
-	BytesAvailable     uint8
-	Reading            bool
-	MsgEncodingVersion uint8
-	ConnectedDevices   []Device
-}
-
-func (c *Comms) clearIncomingMsg() {
-	c.IncomingMsg.Msg.Reset()
-	c.IncomingMsg.MsgComplete = false
-}
-
-func (c *Comms) walkBuffer(conn io.ReadWriteCloser) {
-	b := make([]byte, c.BytesAvailable)
-	n := 0
-	startByte := 0
-	stopByte := 0
-
-	for i := c.BytesRead; i < c.BytesRead+c.BytesAvailable; i++ {
-		stopByte++
-		c.BytesRead++
-		c.BytesAvailable--
-
-		if c.HoldingBuffer[i] == 60 {
-			c.clearIncomingMsg()
-			b[n] = c.HoldingBuffer[i]
-			startByte = n
-			stopByte = n + 1
-			n++
-			continue
-		}
-
-		if c.HoldingBuffer[i] == 62 {
-			b[n] = c.HoldingBuffer[i]
-			c.Reading = false
-			c.IncomingMsg.MsgComplete = true
-			break
-		}
-
-		if !c.IncomingMsg.MsgComplete {
-			b[n] = c.HoldingBuffer[i]
-			n++
-		}
-	}
-
-	c.IncomingMsg.Msg.Write(b[startByte:stopByte])
-	if c.Reading {
-		c.readToBuffer(conn)
-	}
-}
-
-func (c *Comms) readToBuffer(conn io.ReadWriteCloser) {
-	n, err := conn.Read(c.HoldingBuffer)
-	if err != nil {
-		log.Fatalln("Error reading from io.ReadWriteCloser", err)
-	}
-
-	c.BytesRead = 0
-	c.BytesAvailable = uint8(n)
-}
-
-func (c *Comms) ReadFromConnection(conn io.ReadWriteCloser) error {
-	c.Reading = true
-
-	for c.Reading {
-		c.walkBuffer(conn)
-		if c.BytesAvailable == 0 {
-			c.Reading = false
-			break
-		}
-	}
-
-	if !c.IncomingMsg.MsgComplete {
-		errMsg := fmt.Sprintf(
-			"Error reading message. Message incomplete. Expected %d, got %d bytes",
-			c.BytesRead+c.BytesAvailable,
-			c.IncomingMsg.Msg.Len(),
-		)
-
-		return errors.New(errMsg)
-	}
-
-	return nil
+	API_KEY          string
+	BASE_URL         string
+	TCP_PORT         string
+	ConnectedDevices map[string]Device
 }
 
 func (c *Comms) handleConnection(dev Device) {
-	// try reading from connection
-	errReadFromConnection := c.ReadFromConnection(dev.Connection)
-	if errReadFromConnection != nil {
-		log.Fatalln(errReadFromConnection)
-	}
+	initMsg, startSignal := dev.readForSignal("start")
 
-	// decode message, parse it
-	msg, errDecodeMsg := c.IncomingMsg.DecodeMsg(c.MsgEncodingVersion)
-	if errDecodeMsg != nil {
-		log.Fatalln(errDecodeMsg)
-	}
-
-	m, startSignal := strings.CutPrefix(msg, "start")
-
-	if startSignal {
+	if startSignal { // start loop
+		log.Println("Configuring device")
 		// assign stop/service values to device
-		split := strings.Split(m, "|")
+		split := strings.Split(initMsg, "|")
 		dev.TargetStop = split[0]
 		dev.TargetService = split[1]
 
-		data := scraper.Scrape(c.BASE_URL, dev.TargetStop, c.API_KEY)
+		for dev.StatusAlive {
+			log.Println("Loop iter")
 
-		// after reading kick off routine specified in incoming message
-		payload := parser.Parse(
-			parser.Unmarshal([]byte(data)),
-			dev.TargetService,
-		)
+			// after reading kick off routine specified in incoming message
+			log.Println("Scraping...")
+			data := scraper.Scrape(c.BASE_URL, dev.TargetStop, c.API_KEY)
+			payload := parser.Parse(
+				parser.Unmarshal([]byte(data)),
+				dev.TargetService,
+			)
+			log.Print(*payload)
 
-		fmt.Println(*payload)
+			log.Println(fmt.Sprintf("Writing to device: %s", dev.Id))
+			dev.OutgoingMsg.Msg.WriteString(*payload)
+			_, writeErr := dev.Connection.Write(dev.OutgoingMsg.Msg.Bytes())
+			if writeErr != nil {
+				log.Fatalln("Error writing to device", writeErr)
+			}
+			dev.OutgoingMsg.Msg.Reset()
+
+			// listen for kill signal
+			_, killSignal := dev.readForSignal("kill")
+			if killSignal {
+				dev.StatusAlive = false
+				break
+			}
+		}
 	}
 
-	dev.Connection.Close()
+	log.Println(fmt.Sprintf("Killing device: %s", dev.Id))
+	delete(c.ConnectedDevices, dev.Id)
+	dev.KillDevice()
 }
 
-func (c *Comms) Listen() {
+func (c *Comms) Listen(ENCODING_VERSION int) {
 	ln, errListenTCP := net.Listen("tcp", fmt.Sprintf(":%s", c.TCP_PORT))
 	if errListenTCP != nil {
 		log.Fatalln("Can't open TCP connection", errListenTCP)
@@ -151,11 +78,25 @@ func (c *Comms) Listen() {
 			// handle error
 			log.Fatalln("Error accepting incoming TCP connection", errAcceptConnection)
 		}
+
 		// create device, assign connection, and append to list of connected devices
 		dev := Device{
-			Connection: conn,
+			Id: uuid.New().String(),
+			Connection: TCPConnection{
+				Conn:        conn,
+				TimeoutTime: time.Second * 30,
+			},
+			Type:               "tcp",
+			StatusAlive:        true,
+			HoldingBuffer:      make([]byte, 25),
+			IncomingMsg:        messages.MsgBuf{Msg: bytes.Buffer{}, MsgComplete: false},
+			OutgoingMsg:        messages.MsgBuf{Msg: bytes.Buffer{}, MsgComplete: false},
+			BytesAvailable:     0,
+			BytesRead:          0,
+			Reading:            false,
+			MsgEncodingVersion: uint8(ENCODING_VERSION),
 		}
-		c.ConnectedDevices = append(c.ConnectedDevices, dev)
+		c.ConnectedDevices[dev.Id] = dev
 
 		// start routine
 		go c.handleConnection(dev)
