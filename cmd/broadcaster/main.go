@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	// "you-gotta-go/cmd/scraper"
 
@@ -15,13 +16,6 @@ type Broadcaster interface {
 	acceptConnection()
 	handleConnection()
 }
-
-// type Connection interface {
-// 	SendMsg()
-// }
-
-// func () SendMsg() {
-// }
 
 func init() {
 	if err := godotenv.Load(); err != nil {
@@ -37,13 +31,21 @@ func main() {
 	if err != nil {
 		log.Fatalln("Error converting ENCODING_VERSION. Is it a valid int?")
 	}
+	USB_DEVICES := strings.Split(os.Getenv("USB_DEVICES"), "|")
+	BAUD_RATE, err := strconv.Atoi(os.Getenv("BAUD_RATE"))
+	if err != nil {
+		log.Fatalln("Error converting BAUD_RATE. Is it a valid int?")
+	}
 
 	app := Comms{
 		API_KEY:          API_KEY,
 		BASE_URL:         BASE_URL,
 		TCP_PORT:         TCP_PORT,
+		ENCODING_VERSION: uint8(ENCODING_VERSION),
+		USB_DEVICES:      USB_DEVICES,
+		BAUD_RATE:        BAUD_RATE,
 		ConnectedDevices: make(map[string]ConnectedDevice),
 	}
 
-	app.Listen(ENCODING_VERSION)
+	app.Listen()
 }

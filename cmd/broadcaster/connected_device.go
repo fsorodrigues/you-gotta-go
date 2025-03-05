@@ -15,19 +15,19 @@ import (
 )
 
 type ConnectedDevice struct {
-	Id                 string
-	Type               string
-	TargetStop         string
-	TargetService      string
-	Connection         CommsConnection
-	StatusAlive        bool
-	HoldingBuffer      []byte
-	IncomingMsg        messages.MsgBuf
-	OutgoingMsg        messages.MsgBuf
-	BytesRead          uint8
-	BytesAvailable     uint8
-	Reading            bool
-	MsgEncodingVersion uint8
+	Id               string
+	Type             string
+	TargetStop       string
+	TargetService    string
+	Connection       CommsConnection
+	StatusAlive      bool
+	HoldingBuffer    []byte
+	IncomingMsg      messages.MsgBuf
+	OutgoingMsg      messages.MsgBuf
+	BytesRead        uint8
+	BytesAvailable   uint8
+	Reading          bool
+	ENCODING_VERSION uint8
 }
 
 func (dev *ConnectedDevice) clearIncomingMsg() {
@@ -132,7 +132,7 @@ func (dev *ConnectedDevice) readForSignal(signal string) (string, bool) {
 
 	if dev.BytesRead > 0 {
 		// decode message, parse it
-		msg, errDecodeMsg := dev.IncomingMsg.DecodeMsg(dev.MsgEncodingVersion)
+		msg, errDecodeMsg := dev.IncomingMsg.DecodeMsg(dev.ENCODING_VERSION)
 		if errDecodeMsg != nil {
 			log.Fatalln(errDecodeMsg)
 		}
