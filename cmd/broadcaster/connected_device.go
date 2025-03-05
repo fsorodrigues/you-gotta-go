@@ -186,6 +186,22 @@ type SerialConnection struct {
 	TimeoutTime time.Duration
 }
 
+func (c SerialConnection) Read(b []byte) (int, error) {
+	n, err := c.Conn.Read(b)
+	if err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
+func (c SerialConnection) Write(b []byte) (int, error) {
+	n, err := c.Conn.Write(b)
+	if err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
 func (c SerialConnection) Close() error {
 	err := c.Conn.Close()
 	if err != nil {
