@@ -45,7 +45,7 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 				parser.Unmarshal([]byte(data)),
 				dev.TargetService,
 			)
-			log.Print(*payload)
+
 			log.Printf("Writing to device: %s\n", dev.Id)
 			encodingErr := dev.OutgoingMsg.EncodeMsg(*payload, dev.ENCODING_VERSION)
 			if encodingErr != nil {
@@ -135,7 +135,7 @@ func (c *Comms) ListenForUSB() ([]ConnectedDevice, error) {
 			Id: uuid.New().String(),
 			Connection: SerialConnection{
 				Conn:        usb,
-				TimeoutTime: time.Second * 5,
+				TimeoutTime: time.Second * 30,
 			},
 			Type:             "usb",
 			StatusAlive:      true,
@@ -148,7 +148,7 @@ func (c *Comms) ListenForUSB() ([]ConnectedDevice, error) {
 			ENCODING_VERSION: c.ENCODING_VERSION,
 		}
 
-		_, isReady := item.readForSignal("Arduino")
+		_, isReady := item.readForSignal("ready")
 		if isReady {
 			items[i] = item
 		}
@@ -168,7 +168,7 @@ func (c *Comms) Listen() {
 		}
 		c.ConnectedDevices[usbDev.Id] = usbDev
 		defer usbDev.Connection.Close()
-		// go c.handleConnection(usbDev)
+		go c.handleConnection(usbDev)
 	}
 
 	ln, errListenTCP := c.ListenForTCP()
