@@ -3,6 +3,8 @@ package messages
 import (
 	"bytes"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBytesToInt(t *testing.T) {
