@@ -76,3 +76,24 @@ func (m *MsgBuf) DecodeMsg(version uint8) (string, error) {
 
 	return out, nil
 }
+
+func (m *MsgBuf) EncodeMsg(msg string, version uint8) error {
+	if m.MsgComplete {
+		return errors.New("Outgoing message already complete.")
+	}
+
+	l := len(msg)
+	payload := fmt.Sprintf(
+		"%s%3d%3d%s%s",
+		"<",
+		version,
+		l,
+		msg,
+		">",
+	)
+
+	m.Msg.WriteString(payload)
+	m.MsgComplete = true
+
+	return nil
+}

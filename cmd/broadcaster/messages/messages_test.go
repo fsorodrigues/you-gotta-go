@@ -2,6 +2,7 @@ package messages
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,3 +41,19 @@ func TestIntToBytes(t *testing.T) {
 	assert.ElementsMatch(t, got, expected, fmt.Sprintf("got %s, expected %s", got, expected))
 }
 
+func TestEncodeMsg(t *testing.T) {
+	outgoingMsg := MsgBuf{MsgComplete: false}
+	version := uint8(1)
+	outgoingMsg.EncodeMsg("Hello, mom", version)
+	got := outgoingMsg.Msg.String()
+
+	var msg bytes.Buffer
+	msg.WriteString("<  1 10Hello, mom>")
+	expectedMsg := MsgBuf{Msg: msg, MsgComplete: true}
+
+	expected := expectedMsg.Msg.String()
+
+	if got != expected {
+		t.Errorf("got %s, expected %s", got, expected)
+	}
+}

@@ -46,9 +46,12 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 				dev.TargetService,
 			)
 			log.Print(*payload)
+			log.Printf("Writing to device: %s\n", dev.Id)
+			encodingErr := dev.OutgoingMsg.EncodeMsg(*payload, dev.ENCODING_VERSION)
+			if encodingErr != nil {
+				log.Fatalln("Error encoding message", encodingErr)
+			}
 
-			log.Println(fmt.Sprintf("Writing to device: %s", dev.Id))
-			dev.OutgoingMsg.Msg.WriteString(*payload)
 			_, writeErr := dev.Connection.Write(dev.OutgoingMsg.Msg.Bytes())
 			if writeErr != nil {
 				log.Fatalln("Error writing to device", writeErr)
