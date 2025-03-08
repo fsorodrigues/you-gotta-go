@@ -26,6 +26,18 @@ func BytesToInt(byteArray []byte) int {
 	return int(num)
 }
 
+// function to convert an integer to a byte array of a given length
+func IntToBytes(num int, length int) []byte {
+	byteArray := make([]byte, length)
+
+	for i := length - 1; i >= 0; i-- {
+		byteArray[i] = byte(num % 10)
+		num = num / 10
+	}
+
+	return byteArray
+}
+
 func (m *MsgBuf) DecodeMsg(version uint8) (string, error) {
 	if !m.MsgComplete {
 		return "", errors.New("Message incomplete")
