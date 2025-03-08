@@ -110,11 +110,6 @@ void recvBytesWithStartEndMarkers() {
 
 void getNewData() {
   if (newData == true) {
-    Serial.print("New data incoming... ");
-    Serial.print(numReceived);
-    Serial.print(" bytes received");
-    Serial.println();
-  
     for (byte ndx = 0; ndx < numBytes; ndx++) {
       displayBytes[ndx] = receivedBytes[ndx];
     }
