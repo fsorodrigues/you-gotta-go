@@ -20,7 +20,7 @@ func Unmarshal(dataIn []byte) utils.InputData {
 }
 
 func Parse(data utils.InputData, service string) *string {
-	var trips []utils.Trip = utils.FilterByService(data.Trips, "23")
+	var trips []utils.Trip = utils.FilterByService(data.Trips, service)
 	var message *string = new(string)
 
 	if data.Closed || len(data.Trips) < 1 {
