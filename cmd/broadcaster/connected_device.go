@@ -173,7 +173,10 @@ func (c TCPConnection) Close() error {
 }
 
 func (c TCPConnection) SetReadTimeout() {
-	c.Conn.SetReadDeadline(time.Now().Add(c.TimeoutTime))
+	err := c.Conn.SetReadDeadline(time.Now().Add(c.TimeoutTime))
+	if err != nil {
+		log.Fatalln("Error setting SerialConnection read timeout")
+	}
 }
 
 type SerialConnection struct {
@@ -206,7 +209,10 @@ func (c SerialConnection) Close() error {
 }
 
 func (c SerialConnection) SetReadTimeout() {
-	c.Conn.SetReadTimeout(c.TimeoutTime)
+	err := c.Conn.SetReadTimeout(c.TimeoutTime)
+	if err != nil {
+		log.Fatalln("Error setting SerialConnection read timeout")
+	}
 }
 
 type CommsConnection interface {
