@@ -56,7 +56,7 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 			if writeErr != nil {
 				log.Fatalln("Error writing to device", writeErr)
 			}
-			dev.OutgoingMsg.Msg.Reset()
+			dev.OutgoingMsg.Reset()
 
 			// listen for kill signal
 			_, killSignal := dev.readForSignal("kill")

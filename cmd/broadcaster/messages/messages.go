@@ -43,6 +43,11 @@ func IntToBytes(num int, length int) []byte {
 	return byteArray
 }
 
+func (m *MsgBuf) Reset() {
+	m.Msg.Reset()
+	m.MsgComplete = false
+}
+
 func (m *MsgBuf) DecodeMsg(version uint8) (string, error) {
 	if !m.MsgComplete {
 		return "", errors.New("Message incomplete")

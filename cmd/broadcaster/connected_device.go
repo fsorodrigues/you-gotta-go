@@ -30,11 +30,6 @@ type ConnectedDevice struct {
 	ENCODING_VERSION uint8
 }
 
-func (dev *ConnectedDevice) clearIncomingMsg() {
-	dev.IncomingMsg.Msg.Reset()
-	dev.IncomingMsg.MsgComplete = false
-}
-
 func (dev *ConnectedDevice) HoldingBufferReset() {
 	dev.BytesAvailable = 0
 	dev.HoldingBuffer = make([]byte, 25)
@@ -52,7 +47,7 @@ func (dev *ConnectedDevice) walkBuffer(conn CommsConnection) {
 		dev.BytesAvailable--
 
 		if dev.HoldingBuffer[i] == 60 {
-			dev.clearIncomingMsg()
+			dev.IncomingMsg.Reset()
 			b[n] = dev.HoldingBuffer[i]
 			startByte = n
 			stopByte = n + 1
