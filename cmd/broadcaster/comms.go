@@ -67,7 +67,7 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 		}
 	}
 
-	log.Println(fmt.Sprintf("Killing device: %s", dev.Id))
+	log.Printf("Killing device: %s\n", dev.Id)
 	delete(c.ConnectedDevices, dev.Id)
 	dev.KillDevice()
 }
@@ -105,7 +105,7 @@ func (c *Comms) FindUSBDevices() ([]serial.Port, error) {
 		isUsb := strings.Contains(port, "tty")
 		isTty := strings.Contains(port, "usb")
 		if isUsb && isTty && found <= len(c.USB_DEVICES) {
-			log.Println(fmt.Sprintf("Found usb device: %s", port))
+			log.Printf("Found usb device: %s\n", port)
 			conn, err := openUSBConnection(port, c.BAUD_RATE)
 			if err != nil {
 				return nil, err
@@ -183,7 +183,7 @@ func (c *Comms) Listen() {
 			// handle error
 			log.Fatalln("Error accepting incoming TCP connection", errAcceptConnection)
 		}
-		defer tcpConn.Close()
+		// defer tcpConn.Close()
 
 		// create device, assign connection, and append to list of connected devices
 		dev := ConnectedDevice{

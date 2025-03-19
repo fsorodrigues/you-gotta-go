@@ -95,7 +95,7 @@ func (dev *ConnectedDevice) ReadFromConnection(conn CommsConnection) error {
 	dev.Reading = true
 
 	for dev.Reading {
-		log.Println(fmt.Sprintf("Reading status: %v Bytes available: %d", dev.Reading, dev.BytesAvailable))
+		log.Printf("Reading status: %v Bytes available: %d\n", dev.Reading, dev.BytesAvailable)
 		dev.walkBuffer(conn)
 		if dev.BytesAvailable == 0 {
 			dev.Reading = false
@@ -118,7 +118,7 @@ func (dev *ConnectedDevice) ReadFromConnection(conn CommsConnection) error {
 }
 
 func (dev *ConnectedDevice) readForSignal(signal string) (string, bool) {
-	log.Println(fmt.Sprintf("Reading. Waiting for signal: %s", signal))
+	log.Printf("Reading. Waiting for signal: %s\n", signal)
 	// try reading from connection
 	errReadFromConnection := dev.ReadFromConnection(dev.Connection)
 	if errReadFromConnection != nil {
@@ -131,7 +131,7 @@ func (dev *ConnectedDevice) readForSignal(signal string) (string, bool) {
 		if errDecodeMsg != nil {
 			log.Fatalln(errDecodeMsg)
 		}
-		log.Println(fmt.Sprintf("Received: %s", msg))
+		log.Printf("Received: %s\n", msg)
 
 		return strings.CutPrefix(msg, signal)
 	}
