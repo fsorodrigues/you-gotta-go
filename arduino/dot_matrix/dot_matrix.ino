@@ -33,7 +33,8 @@ int HEADER_LENGTH_OFFSET = 3;
 
 const byte numBytes = 32;
 byte receivedBytes[numBytes];
-char receivedMsg[numBytes] = { "Init..." };
+char receivedMsg[numBytes] = { "  1  4Init" };
+char parsedMsg[numBytes] = { "" };
 char displayMsg[numBytes] = { "" };
 byte numReceived = 0;
 bool newData = false;
@@ -79,12 +80,48 @@ void readSerial() {
 
 void getNewData() {
   if (newData == true) {
-    for (byte ndx = HEADER_ENCODING_VERSION_OFFSET + HEADER_LENGTH_OFFSET; ndx < numBytes; ndx++) {
+    for (byte ndx = 0; ndx < numBytes; ndx++) {
       receivedMsg[ndx] = (char *)receivedBytes[ndx];
     }
 
     newData = false;
   }
+}
+
+int parseMessageEncodingVersion(char msg[numBytes])
+{
+  int l = HEADER_ENCODING_VERSION_OFFSET+1;
+  char version[l];
+  strncpy(version, &msg[0], HEADER_ENCODING_VERSION_OFFSET);
+  version[l] = '\0';
+
+  return atoi(version); 
+}
+
+int parseMessageLength(char msg[numBytes])
+{
+  int l = HEADER_LENGTH_OFFSET+1;
+  char length[l];
+  strncpy(length, &msg[HEADER_LENGTH_OFFSET], HEADER_LENGTH_OFFSET);
+  length[l] = '\0';
+
+  return atoi(length); 
+}
+
+void parseMessage()
+{
+  int version = parseMessageEncodingVersion(receivedMsg);
+  if (version != ENCODING_VERSION) {
+    Serial.println("Version mismatch");
+  }
+  int msgLength = parseMessageLength(receivedMsg);
+
+  memset(displayMsg, '\0', numBytes);
+  strncpy(
+    displayMsg, 
+    &receivedMsg[HEADER_ENCODING_VERSION_OFFSET+HEADER_LENGTH_OFFSET],
+    msgLength
+  );
 }
 
 void setup()
@@ -104,9 +141,9 @@ void loop()
 {
   if (P.displayAnimate())
   {
-    if (true)
+    if (newMsg == true)
     {
-      strcpy(displayMsg, receivedMsg);
+      parseMessage();
       newMsg = false;
     }
     P.displayReset();
@@ -114,5 +151,6 @@ void loop()
  
   readSerial();
   getNewData();
+  delay(50);
 }
 
