@@ -36,7 +36,7 @@ func TestDecodeMsg(t *testing.T) {
 
 func TestIntToBytes(t *testing.T) {
 	got := IntToBytes(1, 3)
-	expected := []byte{0, 0, 1}
+	expected := []byte{32, 32, 49}
 
 	assert.ElementsMatch(t, got, expected, fmt.Sprintf("got %s, expected %s", got, expected))
 }

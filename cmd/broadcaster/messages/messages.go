@@ -31,7 +31,12 @@ func IntToBytes(num int, length int) []byte {
 	byteArray := make([]byte, length)
 
 	for i := length - 1; i >= 0; i-- {
-		byteArray[i] = byte(num % 10)
+		b := byte((num % 10) + 48)
+		if b == 48 && i != length-1 {
+			byteArray[i] = 32
+		} else {
+			byteArray[i] = b
+		}
 		num = num / 10
 	}
 
