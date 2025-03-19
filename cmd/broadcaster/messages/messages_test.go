@@ -44,7 +44,9 @@ func TestIntToBytes(t *testing.T) {
 func TestEncodeMsg(t *testing.T) {
 	outgoingMsg := MsgBuf{MsgComplete: false}
 	version := uint8(1)
-	outgoingMsg.EncodeMsg("Hello, mom", version)
+	err := outgoingMsg.EncodeMsg("Hello, mom", version)
+	assert.Nilf(t, err, "error message %s", "formatted")
+
 	got := outgoingMsg.Msg.String()
 
 	var msg bytes.Buffer
