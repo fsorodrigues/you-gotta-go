@@ -88,16 +88,12 @@ func (m *MsgBuf) EncodeMsg(msg string, version uint8) error {
 	}
 
 	l := len(msg)
-	payload := fmt.Sprintf(
-		"%s%3d%3d%s%s",
-		"<",
-		version,
-		l,
-		msg,
-		">",
-	)
 
-	m.Msg.WriteString(payload)
+	m.Msg.Write([]byte("<"))
+	m.Msg.Write(IntToBytes(int(version), 3))
+	m.Msg.Write(IntToBytes(l, 3))
+	m.Msg.Write([]byte(msg))
+	m.Msg.Write([]byte(">"))
 	m.MsgComplete = true
 
 	return nil
