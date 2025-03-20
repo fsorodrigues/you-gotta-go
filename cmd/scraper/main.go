@@ -5,9 +5,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
-
-	"github.com/joho/godotenv"
 )
 
 func createUrl(BASE_URL string, stop string) string {
@@ -48,20 +45,4 @@ func Scrape(BASE_URL string, stop string, API_KEY string) string {
 	resp := getData(url, API_KEY)
 
 	return parseData(resp)
-}
-
-func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Print("No .env file found")
-	}
-}
-
-func main() {
-	API_KEY := os.Getenv("API_KEY")
-	BASE_URL := os.Getenv("BASE_URL")
-	stop := os.Args[1]
-
-	data := Scrape(BASE_URL, stop, API_KEY)
-
-	fmt.Println(data)
 }

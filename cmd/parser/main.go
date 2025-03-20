@@ -2,7 +2,6 @@ package parser
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	trip "you-gotta-go/cmd/parser/tripping"
 	utils "you-gotta-go/cmd/parser/utils"
@@ -31,12 +30,4 @@ func Parse(data utils.InputData, service string) *string {
 	}
 
 	return message
-}
-
-func main() {
-	data := utils.Read()
-
-	message := Parse(data, "23")
-
-	fmt.Print(*message)
 }
