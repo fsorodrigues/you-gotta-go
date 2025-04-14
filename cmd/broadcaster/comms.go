@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"slices"
 	"strings"
 	"time"
 	"you-gotta-go/cmd/broadcaster/messages"
@@ -129,19 +130,18 @@ func (c *Comms) FindUSBDevices() ([]serial.Port, error) {
 		log.Fatal(err)
 	}
 
-	found := 0
+	n_found := 0
 	for _, port := range ports {
-		isUsb := strings.Contains(port, "tty")
-		isTty := strings.Contains(port, "usb")
-		if isUsb && isTty && found <= len(c.USB_DEVICES) {
+		isAcceptedDev := slices.Contains(c.USB_DEVICES, port)
+		if isAcceptedDev && n_found < len(c.USB_DEVICES) {
 			log.Printf("Found usb device: %s\n", port)
 			conn, err := openUSBConnection(port, c.BAUD_RATE)
 			if err != nil {
 				return nil, err
 			}
 
-			items[found] = conn
-			found++
+			items[n_found] = conn
+			n_found++
 		}
 	}
 
