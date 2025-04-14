@@ -30,12 +30,17 @@ type ConnectedDevice struct {
 	ENCODING_VERSION uint8
 }
 
+type DeviceError struct {
+	DeviceID string
+	Err      error
+}
+
 func (dev *ConnectedDevice) HoldingBufferReset() {
 	dev.BytesAvailable = 0
 	dev.HoldingBuffer = make([]byte, 25)
 }
 
-func (dev *ConnectedDevice) walkBuffer(conn CommsConnection) {
+func (dev *ConnectedDevice) walkBuffer(conn CommsConnection) error {
 	b := make([]byte, dev.BytesAvailable)
 	n := 0
 	startByte := 0
@@ -71,24 +76,36 @@ func (dev *ConnectedDevice) walkBuffer(conn CommsConnection) {
 	}
 
 	dev.IncomingMsg.Msg.Write(b[startByte:stopByte])
-	if dev.Reading {
-		dev.readToBuffer(conn)
+	if !dev.Reading {
+		return nil
 	}
+
+	errRead := dev.readToBuffer(conn)
+	if errRead != nil {
+		return errRead
+	}
+
+	return nil
 }
 
-func (d *ConnectedDevice) readToBuffer(conn CommsConnection) {
-	conn.SetReadTimeout()
-	n, err := conn.Read(d.HoldingBuffer)
-	if err != nil {
-		if errors.Is(err, os.ErrDeadlineExceeded) {
-			log.Println("Nothing to read from device.")
-			return
+func (d *ConnectedDevice) readToBuffer(conn CommsConnection) error {
+	errSetTimeout := conn.SetReadTimeout()
+	if errSetTimeout != nil {
+		return errSetTimeout
+	}
+
+	n, errRead := conn.Read(d.HoldingBuffer)
+	if errRead != nil {
+		if errors.Is(errRead, os.ErrDeadlineExceeded) {
+			return errors.New("Nothing to read from device. DeadlineExceeded")
 		}
-		log.Fatalln("Error reading from io.ReadWriteCloser", err)
+		return errRead
 	}
 
 	d.BytesRead = 0
 	d.BytesAvailable = uint8(n)
+
+	return nil
 }
 
 func (dev *ConnectedDevice) ReadFromConnection(conn CommsConnection) error {
@@ -96,7 +113,12 @@ func (dev *ConnectedDevice) ReadFromConnection(conn CommsConnection) error {
 
 	for dev.Reading {
 		log.Printf("Reading status: %v Bytes available: %d\n", dev.Reading, dev.BytesAvailable)
-		dev.walkBuffer(conn)
+
+		errBuffer := dev.walkBuffer(conn)
+		if errBuffer != nil {
+			return errBuffer
+		}
+
 		if dev.BytesAvailable == 0 {
 			dev.Reading = false
 			break
@@ -117,12 +139,12 @@ func (dev *ConnectedDevice) ReadFromConnection(conn CommsConnection) error {
 	return nil
 }
 
-func (dev *ConnectedDevice) readForSignal(signal string) (string, bool) {
+func (dev *ConnectedDevice) readForSignal(signal string) (string, bool, error) {
 	log.Printf("Reading. Waiting for signal: %s\n", signal)
 	// try reading from connection
 	errReadFromConnection := dev.ReadFromConnection(dev.Connection)
 	if errReadFromConnection != nil {
-		log.Fatalln(errReadFromConnection)
+		return "", false, errReadFromConnection
 	}
 
 	if dev.BytesRead > 0 {
@@ -133,10 +155,11 @@ func (dev *ConnectedDevice) readForSignal(signal string) (string, bool) {
 		}
 		log.Printf("Received: %s\n", msg)
 
-		return strings.CutPrefix(msg, signal)
+		cutMsg, found := strings.CutPrefix(msg, signal)
+		return cutMsg, found, nil
 	}
 
-	return "", false
+	return "", false, nil
 }
 
 func (dev *ConnectedDevice) KillDevice() {
@@ -172,11 +195,12 @@ func (c TCPConnection) Close() error {
 	return nil
 }
 
-func (c TCPConnection) SetReadTimeout() {
+func (c TCPConnection) SetReadTimeout() error {
 	err := c.Conn.SetReadDeadline(time.Now().Add(c.TimeoutTime))
 	if err != nil {
-		log.Fatalln("Error setting SerialConnection read timeout")
+		return errors.New("Error setting SerialConnection read timeout")
 	}
+	return nil
 }
 
 type SerialConnection struct {
@@ -208,16 +232,17 @@ func (c SerialConnection) Close() error {
 	return nil
 }
 
-func (c SerialConnection) SetReadTimeout() {
+func (c SerialConnection) SetReadTimeout() error {
 	err := c.Conn.SetReadTimeout(c.TimeoutTime)
 	if err != nil {
-		log.Fatalln("Error setting SerialConnection read timeout")
+		return errors.New("Error setting SerialConnection read timeout")
 	}
+	return nil
 }
 
 type CommsConnection interface {
 	io.Reader
 	io.Writer
 	io.Closer
-	SetReadTimeout()
+	SetReadTimeout() error
 }

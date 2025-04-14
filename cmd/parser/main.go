@@ -22,10 +22,16 @@ func Parse(data utils.InputData, service string) *string {
 	var trips []utils.Trip = utils.FilterByService(data.Trips, service)
 	var message *string = new(string)
 
-	if data.Closed || len(data.Trips) < 1 {
+	if data.Closed {
+		*message = "Stop closed"
+	} else if len(data.Trips) < 1 {
 		*message = "No trips available"
 	} else {
-		var NextTrip utils.Trip = trip.GetNextTrip(trips)
+		NextTrip, err := trip.GetNextTrip(trips)
+		if err != nil {
+			log.Fatalln("Can't get next trip", err)
+		}
+
 		trip.ParseTrip(NextTrip, message)
 	}
 

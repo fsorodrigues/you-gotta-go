@@ -23,53 +23,82 @@ type Comms struct {
 	USB_DEVICES      []string
 	BAUD_RATE        int
 	ConnectedDevices map[string]ConnectedDevice
+	ErrChan          chan DeviceError
 }
 
 func (c *Comms) handleConnection(dev ConnectedDevice) {
-	initMsg, startSignal := dev.readForSignal("start")
+	defer func() {
+		log.Printf("Killing device: %s\n", dev.Id)
+		delete(c.ConnectedDevices, dev.Id)
+		dev.KillDevice()
+	}()
 
-	if startSignal { // start loop
-		log.Println("Configuring device")
-		// assign stop/service values to device
-		split := strings.Split(initMsg, "|")
-		dev.TargetStop = split[0]
-		dev.TargetService = split[1]
-
-		for dev.StatusAlive {
-			log.Println("Loop iter")
-
-			// after reading kick off routine specified in incoming message
-			log.Println("Scraping...")
-			data := scraper.Scrape(c.BASE_URL, dev.TargetStop, c.API_KEY)
-			payload := parser.Parse(
-				parser.Unmarshal([]byte(data)),
-				dev.TargetService,
-			)
-
-			log.Printf("Writing to device: %s\n", dev.Id)
-			encodingErr := dev.OutgoingMsg.EncodeMsg(*payload, dev.ENCODING_VERSION)
-			if encodingErr != nil {
-				log.Fatalln("Error encoding message", encodingErr)
-			}
-
-			_, writeErr := dev.Connection.Write(dev.OutgoingMsg.Msg.Bytes())
-			if writeErr != nil {
-				log.Fatalln("Error writing to device", writeErr)
-			}
-			dev.OutgoingMsg.Reset()
-
-			// listen for kill signal
-			_, killSignal := dev.readForSignal("kill")
-			if killSignal {
-				dev.StatusAlive = false
-				break
-			}
+	initMsg, startSignal, errRead := dev.readForSignal("start")
+	if errRead != nil {
+		c.ErrChan <- DeviceError{
+			DeviceID: dev.Id,
+			Err:      fmt.Errorf("Error receiving start signal: %w", errRead),
 		}
+		return
 	}
 
-	log.Printf("Killing device: %s\n", dev.Id)
-	delete(c.ConnectedDevices, dev.Id)
-	dev.KillDevice()
+	if !startSignal {
+		return
+	}
+
+	log.Println("Configuring device")
+	// assign stop/service values to device
+	split := strings.Split(initMsg, "|")
+	dev.TargetStop = split[0]
+	dev.TargetService = split[1]
+
+	for dev.StatusAlive {
+		// after reading kick off routine specified in incoming message
+		log.Println("Scraping...")
+		data := scraper.Scrape(c.BASE_URL, dev.TargetStop, c.API_KEY)
+		payload := parser.Parse(
+			parser.Unmarshal([]byte(data)),
+			dev.TargetService,
+		)
+
+		log.Printf("Writing to device: %s\n", dev.Id)
+		encodingErr := dev.OutgoingMsg.EncodeMsg(*payload, dev.ENCODING_VERSION)
+		if encodingErr != nil {
+			c.ErrChan <- DeviceError{
+				DeviceID: dev.Id,
+				Err:      fmt.Errorf("Error encoding message: %w", encodingErr),
+			}
+			dev.StatusAlive = false
+			break
+		}
+
+		_, writeErr := dev.Connection.Write(dev.OutgoingMsg.Msg.Bytes())
+		if writeErr != nil {
+			c.ErrChan <- DeviceError{
+				DeviceID: dev.Id,
+				Err:      fmt.Errorf("Error writing to device: %w", writeErr),
+			}
+			dev.StatusAlive = false
+			break
+		}
+		dev.OutgoingMsg.Reset()
+
+		// listen for kill signal
+		_, killSignal, killErr := dev.readForSignal("kill")
+		if killErr != nil {
+			// c.ErrChan <- DeviceError{
+			// 	DeviceID: dev.Id,
+			// 	Err:      fmt.Errorf("Error receiving kill signal: %w", killErr),
+			// }
+			// dev.StatusAlive = false
+			// break
+			log.Println("Didn't receive kill signal. Let's keep riding the bus.")
+		}
+		if killSignal {
+			dev.StatusAlive = false
+			break
+		}
+	}
 }
 
 func (c *Comms) ListenForTCP() (net.Listener, error) {
@@ -148,7 +177,11 @@ func (c *Comms) ListenForUSB() ([]ConnectedDevice, error) {
 			ENCODING_VERSION: c.ENCODING_VERSION,
 		}
 
-		_, isReady := item.readForSignal("ready")
+		_, isReady, errRead := item.readForSignal("ready")
+		if errRead != nil {
+			return items, errRead
+		}
+
 		if isReady {
 			items[i] = item
 		}
@@ -157,6 +190,15 @@ func (c *Comms) ListenForUSB() ([]ConnectedDevice, error) {
 }
 
 func (c *Comms) Listen() {
+	// Create error handling goroutine
+	go func() {
+		for deviceErr := range c.ErrChan {
+			log.Printf("Error from device %s: %v\n", deviceErr.DeviceID, deviceErr.Err)
+			// Additional error handling logic here
+			// You could trigger reconnection, notify administrators, etc.
+		}
+	}()
+
 	usbDevices, errListenUSB := c.ListenForUSB()
 	if errListenUSB != nil {
 		log.Fatalln("Can't open USB connection", errListenUSB)
@@ -206,5 +248,6 @@ func (c *Comms) Listen() {
 
 		// start routine
 		go c.handleConnection(dev)
+
 	}
 }

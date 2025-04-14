@@ -8,7 +8,10 @@ import (
 	utils "you-gotta-go/cmd/parser/utils"
 )
 
-func GetNextTrip(data []utils.Trip) utils.Trip {
+func GetNextTrip(data []utils.Trip) (utils.Trip, error) {
+	if len(data) == 0 {
+		return utils.Trip{}, fmt.Errorf("No trips available")
+	}
 	d := data
 
 	sort.Slice(d, func(i, j int) bool {
@@ -18,7 +21,7 @@ func GetNextTrip(data []utils.Trip) utils.Trip {
 		return ii.Before(jj)
 	})
 
-	return d[0]
+	return d[0], nil
 }
 
 func formatTime(d time.Duration) string {
