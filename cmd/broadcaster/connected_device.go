@@ -35,6 +35,10 @@ type DeviceError struct {
 	Err      error
 }
 
+func (d DeviceError) Error() string {
+	return fmt.Sprintf("Error from Device '%s': %v", d.DeviceID, d.Err.Error())
+}
+
 func (dev *ConnectedDevice) HoldingBufferReset() {
 	dev.BytesAvailable = 0
 	dev.HoldingBuffer = make([]byte, 25)
@@ -151,7 +155,7 @@ func (dev *ConnectedDevice) readForSignal(signal string) (string, bool, error) {
 		// decode message, parse it
 		msg, errDecodeMsg := dev.IncomingMsg.DecodeMsg(dev.ENCODING_VERSION)
 		if errDecodeMsg != nil {
-			log.Fatalln(errDecodeMsg)
+			return "", false, errDecodeMsg
 		}
 		log.Printf("Received: %s\n", msg)
 

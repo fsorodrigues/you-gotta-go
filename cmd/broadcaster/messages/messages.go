@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 )
 
@@ -63,8 +62,12 @@ func (m *MsgBuf) DecodeMsg(version uint8) (string, error) {
 	version_bytes := 3
 
 	if BytesToInt(msgBytes[version_start:version_start+version_bytes]) != int(version) {
-		fmt.Println("version:", msgBytes)
-		errMsg := fmt.Sprintf("Invalid message version: '%s'", string(msgBytes))
+		errMsg := fmt.Sprintf(
+			"Invalid message version: '%s'. Expected %v, Got %d",
+			string(msgBytes),
+			msgBytes[version_start:version_start+version_bytes],
+			version,
+		)
 		return "", errors.New(errMsg)
 	}
 
@@ -76,7 +79,7 @@ func (m *MsgBuf) DecodeMsg(version uint8) (string, error) {
 	var out string
 	for i := msg_start; i < msg_bytes+msg_start; i++ {
 		if i >= len(msgBytes) {
-			log.Fatalln("Expected a bigger message. Something's wrong with the encoding")
+			return "", errors.New("Expected a bigger message. Something's wrong with the encoding")
 		}
 
 		out = out + string(msgBytes[i])

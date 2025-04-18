@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	// "you-gotta-go/cmd/scraper"
-
 	"github.com/joho/godotenv"
 )
 
@@ -45,7 +43,7 @@ func main() {
 		USB_DEVICES:      USB_DEVICES,
 		BAUD_RATE:        BAUD_RATE,
 		ConnectedDevices: make(map[string]ConnectedDevice),
-		ErrChan:          make(chan DeviceError, 100), // Buffered channel to avoid blocking
+		ErrChan:          make(chan error, 100), // Buffered channel to avoid blocking
 	}
 
 	app.Listen()

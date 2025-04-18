@@ -24,7 +24,16 @@ type Comms struct {
 	USB_DEVICES      []string
 	BAUD_RATE        int
 	ConnectedDevices map[string]ConnectedDevice
-	ErrChan          chan DeviceError
+	ErrChan          chan error
+}
+
+type CommsError struct {
+	Comms Comms
+	Err   error
+}
+
+func (d CommsError) Error() string {
+	return fmt.Sprintf("Error at the Comms level. %v", d.Err.Error())
 }
 
 func (c *Comms) handleConnection(dev ConnectedDevice) {
@@ -87,12 +96,6 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 		// listen for kill signal
 		_, killSignal, killErr := dev.readForSignal("kill")
 		if killErr != nil {
-			// c.ErrChan <- DeviceError{
-			// 	DeviceID: dev.Id,
-			// 	Err:      fmt.Errorf("Error receiving kill signal: %w", killErr),
-			// }
-			// dev.StatusAlive = false
-			// break
 			log.Println("Didn't receive kill signal. Let's keep riding the bus.")
 		}
 		if killSignal {
@@ -123,35 +126,39 @@ func openUSBConnection(port string, BAUD_RATE int) (serial.Port, error) {
 	return usbPort, nil
 }
 
-func (c *Comms) FindUSBDevices() ([]serial.Port, error) {
+func (c *Comms) FindUSBDevices() ([]serial.Port, []string, error) {
 	items := make([]serial.Port, len(c.USB_DEVICES))
+	names := make([]string, len(c.USB_DEVICES))
 	ports, err := serial.GetPortsList()
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
 
 	n_found := 0
 	for _, port := range ports {
 		isAcceptedDev := slices.Contains(c.USB_DEVICES, port)
-		if isAcceptedDev && n_found < len(c.USB_DEVICES) {
+
+		_, found := c.ConnectedDevices[port]
+		if isAcceptedDev && n_found < len(c.USB_DEVICES) && !found {
 			log.Printf("Found usb device: %s\n", port)
 			conn, err := openUSBConnection(port, c.BAUD_RATE)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			items[n_found] = conn
+			names[n_found] = port
 			n_found++
 		}
 	}
 
-	return items, nil
+	return items, names, nil
 }
 
 func (c *Comms) ListenForUSB() ([]ConnectedDevice, error) {
-	usbDevices, usbError := c.FindUSBDevices()
+	usbDevices, usbNames, usbError := c.FindUSBDevices()
 	if usbError != nil {
-		log.Fatalln(usbError)
+		return nil, usbError
 	}
 	items := make([]ConnectedDevice, len(c.USB_DEVICES))
 
@@ -161,7 +168,7 @@ func (c *Comms) ListenForUSB() ([]ConnectedDevice, error) {
 		}
 
 		item := ConnectedDevice{
-			Id: uuid.New().String(),
+			Id: usbNames[i],
 			Connection: SerialConnection{
 				Conn:        usb,
 				TimeoutTime: time.Second * 30,
@@ -192,40 +199,53 @@ func (c *Comms) ListenForUSB() ([]ConnectedDevice, error) {
 func (c *Comms) Listen() {
 	// Create error handling goroutine
 	go func() {
-		for deviceErr := range c.ErrChan {
-			log.Printf("Error from device %s: %v\n", deviceErr.DeviceID, deviceErr.Err)
-			// Additional error handling logic here
-			// You could trigger reconnection, notify administrators, etc.
+		for err := range c.ErrChan {
+			log.Printf("%v\n", err.Error())
 		}
 	}()
 
-	usbDevices, errListenUSB := c.ListenForUSB()
-	if errListenUSB != nil {
-		log.Fatalln("Can't open USB connection", errListenUSB)
-	}
+	go func() {
+		for {
+			usbDevices, errListenUSB := c.ListenForUSB()
+			if errListenUSB != nil {
+				c.ErrChan <- CommsError{
+					Comms: *c,
+					Err:   fmt.Errorf("Error attempting to listen for USB devices: %w", errListenUSB),
+				}
+			}
 
-	for _, usbDev := range usbDevices {
-		if usbDev.Id == "" {
-			break
+			for _, usbDev := range usbDevices {
+				if usbDev.Id == "" {
+					continue
+				}
+
+				c.ConnectedDevices[usbDev.Id] = usbDev
+				defer usbDev.Connection.Close()
+				go c.handleConnection(usbDev)
+			}
+
+			// Wait before scanning again
+			time.Sleep(5 * time.Second)
 		}
-		c.ConnectedDevices[usbDev.Id] = usbDev
-		defer usbDev.Connection.Close()
-		go c.handleConnection(usbDev)
-	}
+	}()
 
 	ln, errListenTCP := c.ListenForTCP()
 	if errListenTCP != nil {
-		log.Fatalln("Can't open TCP connection", errListenTCP)
+		c.ErrChan <- CommsError{
+			Comms: *c,
+			Err:   fmt.Errorf("Error attempting open port for TCP connections: %w", errListenTCP),
+		}
 	}
 	defer ln.Close()
 
 	for {
 		tcpConn, errAcceptConnection := ln.Accept()
 		if errAcceptConnection != nil {
-			// handle error
-			log.Fatalln("Error accepting incoming TCP connection", errAcceptConnection)
+			c.ErrChan <- CommsError{
+				Comms: *c,
+				Err:   fmt.Errorf("Error attempting accept TCP connection: %w", errListenTCP),
+			}
 		}
-		// defer tcpConn.Close()
 
 		// create device, assign connection, and append to list of connected devices
 		dev := ConnectedDevice{
