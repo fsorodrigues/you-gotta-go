@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"slices"
 	"strings"
@@ -38,7 +38,7 @@ func (d CommsError) Error() string {
 
 func (c *Comms) handleConnection(dev ConnectedDevice) {
 	defer func() {
-		log.Printf("Killing device: %s\n", dev.Id)
+		slog.Info(fmt.Sprintf("Killing device: %s\n", dev.Id))
 		delete(c.ConnectedDevices, dev.Id)
 		dev.KillDevice()
 	}()
@@ -53,7 +53,7 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 		return
 	}
 
-	log.Println("Configuring device")
+	slog.Debug("Configuring device")
 	// assign stop/service values to device
 	split := strings.Split(initMsg, "|")
 	dev.TargetStop = split[0]
@@ -61,7 +61,14 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 
 	for dev.StatusAlive {
 		// after reading kick off routine specified in incoming message
-		log.Println("Scraping...")
+		slog.Info(
+			fmt.Sprintf(
+				"Initiating scraping routine for device %s",
+				dev.Id,
+			),
+			"target_stop", dev.TargetStop,
+			"target_service", dev.TargetService,
+		)
 		raw_data, scrapingErr := scraper.Scrape(c.BASE_URL, dev.TargetStop, c.API_KEY)
 		if scrapingErr != nil {
 			c.ErrChan <- scrapingErr
@@ -77,7 +84,7 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 			c.ErrChan <- parserErr
 		}
 
-		log.Printf("Writing to device: %s\n", dev.Id)
+		slog.Info(fmt.Sprintf("Writing to device: %s\n", dev.Id))
 		encodingErr := dev.OutgoingMsg.EncodeMsg(*payload, dev.ENCODING_VERSION)
 		if encodingErr != nil {
 			c.ErrChan <- encodingErr
@@ -99,7 +106,7 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 		// listen for kill signal
 		_, killSignal, killErr := dev.readForSignal("kill")
 		if killErr != nil {
-			log.Println("Didn't receive kill signal. Let's keep riding the bus.")
+			slog.Debug("Didn't receive kill signal. Let's keep riding the bus.")
 		}
 		if killSignal {
 			dev.StatusAlive = false
@@ -143,7 +150,7 @@ func (c *Comms) FindUSBDevices() ([]serial.Port, []string, error) {
 
 		_, found := c.ConnectedDevices[port]
 		if isAcceptedDev && n_found < len(c.USB_DEVICES) && !found {
-			log.Printf("Found usb device: %s\n", port)
+			slog.Info(fmt.Sprintf("Found usb device: %s\n", port))
 			conn, err := openUSBConnection(port, c.BAUD_RATE)
 			if err != nil {
 				return nil, nil, err
@@ -203,7 +210,7 @@ func (c *Comms) Listen() {
 	// Create error handling goroutine
 	go func() {
 		for err := range c.ErrChan {
-			log.Printf("%v\n", err.Error())
+			slog.Error(fmt.Sprintf("%v\n", err.Error()))
 		}
 	}()
 

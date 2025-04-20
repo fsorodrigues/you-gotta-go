@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net"
 	"os"
 	"strings"
@@ -119,7 +120,7 @@ func (dev *ConnectedDevice) ReadFromConnection(conn CommsConnection) error {
 	dev.Reading = true
 
 	for dev.Reading {
-		log.Printf("Reading status: %v Bytes available: %d\n", dev.Reading, dev.BytesAvailable)
+		slog.Debug(fmt.Sprintf("Reading status: %v Bytes available: %d\n", dev.Reading, dev.BytesAvailable))
 
 		errBuffer := dev.walkBuffer(conn)
 		if errBuffer != nil {
@@ -150,7 +151,7 @@ func (dev *ConnectedDevice) ReadFromConnection(conn CommsConnection) error {
 }
 
 func (dev *ConnectedDevice) readForSignal(signal string) (string, bool, error) {
-	log.Printf("Reading. Waiting for signal: %s\n", signal)
+	slog.Debug(fmt.Sprintf("Reading. Waiting for signal: %s\n", signal))
 	// try reading from connection
 	errReadFromConnection := dev.ReadFromConnection(dev.Connection)
 	if errReadFromConnection != nil {

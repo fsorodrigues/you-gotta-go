@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -17,7 +18,7 @@ type Broadcaster interface {
 
 func init() {
 	if err := godotenv.Load(); err != nil {
-		log.Print("No .env file found")
+		slog.Warn("No .env file found")
 	}
 }
 
@@ -27,12 +28,14 @@ func main() {
 	TCP_PORT := os.Getenv("TCP_PORT")
 	ENCODING_VERSION, err := strconv.Atoi(os.Getenv("ENCODING_VERSION"))
 	if err != nil {
-		log.Fatalln("Error converting ENCODING_VERSION. Is it a valid int?")
+		slog.Error("Error converting ENCODING_VERSION. Is it a valid int?\n")
+		log.Fatalln("Crashing program.")
 	}
 	USB_DEVICES := strings.Split(os.Getenv("USB_DEVICES"), "|")
 	BAUD_RATE, err := strconv.Atoi(os.Getenv("BAUD_RATE"))
 	if err != nil {
-		log.Fatalln("Error converting BAUD_RATE. Is it a valid int?")
+		slog.Error("Error converting BAUD_RATE. Is it a valid int?")
+		log.Fatalln("Crashing program.")
 	}
 
 	app := Comms{
