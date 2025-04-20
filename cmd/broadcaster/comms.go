@@ -65,7 +65,11 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 	for dev.StatusAlive {
 		// after reading kick off routine specified in incoming message
 		log.Println("Scraping...")
-		data := scraper.Scrape(c.BASE_URL, dev.TargetStop, c.API_KEY)
+		data, scrapingErr := scraper.Scrape(c.BASE_URL, dev.TargetStop, c.API_KEY)
+		if scrapingErr != nil {
+			c.ErrChan <- scrapingErr
+		}
+
 		payload := parser.Parse(
 			parser.Unmarshal([]byte(data)),
 			dev.TargetService,
