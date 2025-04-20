@@ -2,10 +2,6 @@ package utils
 
 import (
 	"database/sql"
-	"encoding/json"
-	"io"
-	"log"
-	"os"
 	"strings"
 	"time"
 )
@@ -68,19 +64,4 @@ func FilterByService(trips []Trip, service string) []Trip {
 	}
 
 	return arr_map[service]
-}
-
-func Read() InputData {
-	stdin, err := io.ReadAll(os.Stdin)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	var d InputData
-
-	jsonErr := json.Unmarshal(stdin, &d)
-	if jsonErr != nil {
-		log.Fatalln("Error parsing JSON input")
-	}
-	return d
 }

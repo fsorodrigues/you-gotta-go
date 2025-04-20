@@ -2,23 +2,35 @@ package parser
 
 import (
 	"encoding/json"
-	"log"
+	"errors"
+	"fmt"
 	trip "you-gotta-go/cmd/parser/trip"
 	utils "you-gotta-go/cmd/parser/utils"
 )
 
-func Unmarshal(dataIn []byte) utils.InputData {
+type ParserError struct {
+	Err error
+}
+
+func (d ParserError) Error() string {
+	return fmt.Sprintf("Error parsing message %v", d.Err.Error())
+}
+
+func Unmarshal(dataIn []byte) (utils.InputData, error) {
 	var data utils.InputData
 
 	jsonErr := json.Unmarshal(dataIn, &data)
 	if jsonErr != nil {
-		log.Fatalln("Error parsing JSON input")
+		errMsg := fmt.Sprintf("Error parsing JSON input. %v\n", jsonErr)
+		return utils.InputData{}, ParserError{
+			Err: errors.New(errMsg),
+		}
 	}
 
-	return data
+	return data, nil
 }
 
-func Parse(data utils.InputData, service string) *string {
+func Parse(data utils.InputData, service string) (*string, error) {
 	var trips []utils.Trip = utils.FilterByService(data.Trips, service)
 	var message *string = new(string)
 
@@ -29,11 +41,13 @@ func Parse(data utils.InputData, service string) *string {
 	} else {
 		NextTrip, err := trip.GetNextTrip(trips)
 		if err != nil {
-			log.Fatalln("Can't get next trip", err)
+			errMsg := fmt.Sprintf("Can't get next trip. %v\n", err)
+			return nil, ParserError{
+				Err: errors.New(errMsg),
+			}
 		}
-
 		trip.ParseTrip(NextTrip, message)
 	}
 
-	return message
+	return message, nil
 }

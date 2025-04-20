@@ -62,15 +62,20 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 	for dev.StatusAlive {
 		// after reading kick off routine specified in incoming message
 		log.Println("Scraping...")
-		data, scrapingErr := scraper.Scrape(c.BASE_URL, dev.TargetStop, c.API_KEY)
+		raw_data, scrapingErr := scraper.Scrape(c.BASE_URL, dev.TargetStop, c.API_KEY)
 		if scrapingErr != nil {
 			c.ErrChan <- scrapingErr
 		}
 
-		payload := parser.Parse(
-			parser.Unmarshal([]byte(data)),
-			dev.TargetService,
-		)
+		data, unmarshallErr := parser.Unmarshal([]byte(raw_data))
+		if unmarshallErr != nil {
+			c.ErrChan <- scrapingErr
+		}
+
+		payload, parserErr := parser.Parse(data, dev.TargetService)
+		if parserErr != nil {
+			c.ErrChan <- parserErr
+		}
 
 		log.Printf("Writing to device: %s\n", dev.Id)
 		encodingErr := dev.OutgoingMsg.EncodeMsg(*payload, dev.ENCODING_VERSION)

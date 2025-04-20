@@ -56,7 +56,7 @@ func CreateMessageFromTrip(scn string, trip utils.Trip) string {
 		return fmt.Sprintf("%s: CANC", trip.ServiceID)
 	case "delayed":
 		diff = trip.Arrival.Expected.Time.Sub(now)
-		return fmt.Sprintf("%s: %s del", trip.ServiceID, formatTime(diff))
+		return fmt.Sprintf("%s: %sm del", trip.ServiceID, formatTime(diff))
 	case "early":
 		diff = trip.Arrival.Expected.Time.Sub(now)
 		return fmt.Sprintf("%s: %sm ear", trip.ServiceID, formatTime(diff))
