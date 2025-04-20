@@ -3,7 +3,7 @@ package parser
 import (
 	"encoding/json"
 	"log"
-	trip "you-gotta-go/cmd/parser/tripping"
+	trip "you-gotta-go/cmd/parser/trip"
 	utils "you-gotta-go/cmd/parser/utils"
 )
 

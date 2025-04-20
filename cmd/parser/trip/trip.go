@@ -1,4 +1,4 @@
-package tripping
+package trip
 
 import (
 	"fmt"
