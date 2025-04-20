@@ -78,10 +78,7 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 		log.Printf("Writing to device: %s\n", dev.Id)
 		encodingErr := dev.OutgoingMsg.EncodeMsg(*payload, dev.ENCODING_VERSION)
 		if encodingErr != nil {
-			c.ErrChan <- DeviceError{
-				DeviceID: dev.Id,
-				Err:      fmt.Errorf("Error encoding message: %w", encodingErr),
-			}
+			c.ErrChan <- encodingErr
 			dev.StatusAlive = false
 			break
 		}

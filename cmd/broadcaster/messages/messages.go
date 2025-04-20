@@ -12,6 +12,21 @@ type MsgBuf struct {
 	MsgComplete bool
 }
 
+type MsgError struct {
+	MsgBuf    MsgBuf
+	Operation string
+	Err       error
+}
+
+func (d MsgError) Error() string {
+	return fmt.Sprintf(
+		"Error at operation %s on message %s: %v",
+		d.Operation,
+		d.MsgBuf.Msg.String(),
+		d.Err.Error(),
+	)
+}
+
 func BytesToInt(byteArray []byte) int {
 	var num float64 = 0
 	for i, b := range byteArray {
@@ -49,13 +64,21 @@ func (m *MsgBuf) Reset() {
 
 func (m *MsgBuf) DecodeMsg(version uint8) (string, error) {
 	if !m.MsgComplete {
-		return "", errors.New("Message incomplete")
+		return "", MsgError{
+			MsgBuf:    *m,
+			Operation: "Decode",
+			Err:       errors.New("Message incomplete"),
+		}
 	}
 
 	msgBytes := m.Msg.Bytes()
 	if (msgBytes[0] != 60) || (msgBytes[len(msgBytes)-1] != 62) {
 		errMsg := fmt.Sprintf("Invalid message format: '%s'", string(msgBytes))
-		return "", errors.New(errMsg)
+		return "", MsgError{
+			MsgBuf:    *m,
+			Operation: "Decode",
+			Err:       errors.New(errMsg),
+		}
 	}
 
 	version_start := 1
@@ -68,7 +91,11 @@ func (m *MsgBuf) DecodeMsg(version uint8) (string, error) {
 			msgBytes[version_start:version_start+version_bytes],
 			version,
 		)
-		return "", errors.New(errMsg)
+		return "", MsgError{
+			MsgBuf:    *m,
+			Operation: "Decode",
+			Err:       errors.New(errMsg),
+		}
 	}
 
 	msg_len_start := version_start + version_bytes
@@ -79,7 +106,11 @@ func (m *MsgBuf) DecodeMsg(version uint8) (string, error) {
 	var out string
 	for i := msg_start; i < msg_bytes+msg_start; i++ {
 		if i >= len(msgBytes) {
-			return "", errors.New("Expected a bigger message. Something's wrong with the encoding")
+			return "", MsgError{
+				MsgBuf:    *m,
+				Operation: "Decode",
+				Err:       errors.New("Expected a bigger message. Something's wrong with the encoding"),
+			}
 		}
 
 		out = out + string(msgBytes[i])
@@ -92,7 +123,11 @@ func (m *MsgBuf) DecodeMsg(version uint8) (string, error) {
 
 func (m *MsgBuf) EncodeMsg(msg string, version uint8) error {
 	if m.MsgComplete {
-		return errors.New("Outgoing message already complete.")
+		return MsgError{
+			MsgBuf:    *m,
+			Operation: "Decode",
+			Err:       errors.New("Outgoing message already complete."),
+		}
 	}
 
 	l := len(msg)
