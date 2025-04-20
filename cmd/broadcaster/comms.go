@@ -45,10 +45,7 @@ func (c *Comms) handleConnection(dev ConnectedDevice) {
 
 	initMsg, startSignal, errRead := dev.readForSignal("start")
 	if errRead != nil {
-		c.ErrChan <- DeviceError{
-			DeviceID: dev.Id,
-			Err:      fmt.Errorf("Error receiving start signal: %w", errRead),
-		}
+		c.ErrChan <- errRead
 		return
 	}
 
@@ -234,7 +231,7 @@ func (c *Comms) Listen() {
 	if errListenTCP != nil {
 		c.ErrChan <- CommsError{
 			Comms: *c,
-			Err:   fmt.Errorf("Error attempting open port for TCP connections: %w", errListenTCP),
+			Err:   fmt.Errorf("Error attempting to open port for TCP connections: %w", errListenTCP),
 		}
 	}
 	defer ln.Close()
@@ -244,7 +241,7 @@ func (c *Comms) Listen() {
 		if errAcceptConnection != nil {
 			c.ErrChan <- CommsError{
 				Comms: *c,
-				Err:   fmt.Errorf("Error attempting accept TCP connection: %w", errListenTCP),
+				Err:   fmt.Errorf("Error attempting to accept TCP connection: %w", errListenTCP),
 			}
 		}
 

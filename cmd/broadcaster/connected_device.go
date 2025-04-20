@@ -86,7 +86,10 @@ func (dev *ConnectedDevice) walkBuffer(conn CommsConnection) error {
 
 	errRead := dev.readToBuffer(conn)
 	if errRead != nil {
-		return errRead
+		return DeviceError{
+			DeviceID: dev.Id,
+			Err:      errRead,
+		}
 	}
 
 	return nil
@@ -137,7 +140,10 @@ func (dev *ConnectedDevice) ReadFromConnection(conn CommsConnection) error {
 			dev.IncomingMsg.Msg.Len(),
 		)
 
-		return errors.New(errMsg)
+		return DeviceError{
+			DeviceID: dev.Id,
+			Err:      errors.New(errMsg),
+		}
 	}
 
 	return nil
