@@ -128,7 +128,9 @@ void setup()
 {
   Serial.begin(57600);
   P.begin();
-  P.displayText(displayMsg, PA_LEFT, 25, 5000, PA_SCROLL_LEFT, PA_SCROLL_LEFT);
+  P.setZoneEffect(0, true, PA_FLIP_LR);
+  P.setZoneEffect(0, true, PA_FLIP_UD);
+  P.displayText(displayMsg, PA_RIGHT, 25, 5000, PA_SCROLL_RIGHT, PA_SCROLL_RIGHT);
 
   encodeMessage(msg, "ready");
   Serial.println(msg);
